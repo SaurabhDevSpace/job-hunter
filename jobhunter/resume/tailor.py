@@ -282,7 +282,7 @@ def _claimable_keywords(profile: Profile, ats_keywords: list[str]) -> list[str]:
 _QUANTITY = re.compile(
     r"(?<![\w.])(?:rs\.?\s*|inr\s*|usd\s*|\$|₹)?\s*"
     r"(\d{1,4}(?:[.,]\d{1,3})?)\s*"
-    r"(%|percent|m\b|mn\b|k\b|bn\b|cr\b|crore|lakhs?|x\b|\+)?", re.I)
+    r"(%|percent|m\b|mn\b|k\b|bn\b|cr\b|crores?|lakhs?|l\b|x\b|\+)?", re.I)
 
 # Phrases that can be excised without breaking the sentence.
 _TRAILING_CLAIM = re.compile(
@@ -290,11 +290,12 @@ _TRAILING_CLAIM = re.compile(
     r"(?:by|to|of|reaching|achieving|delivering|generating|yielding|worth|up to)\s+"
     r"(?:approximately\s+|approx\.?\s+|around\s+|~\s*|over\s+|more than\s+)?"
     r"(?:rs\.?\s*|inr\s*|usd\s*|\$|₹)?\d{1,4}(?:[.,]\d{1,3})?\s*"
-    r"(?:%|percent|m|mn|k|bn|cr|crore|lakhs?|x)?"
+    r"(?:%|percent|m|mn|k|bn|cr|crores?|lakhs?|l|x)?"
     r"(?:\s+(?:uplift|improvement|increase|reduction|gain|growth|savings?|faster|"
     r"points?|percentage points?|within \d+ (?:months?|weeks?|years?)))?", re.I)
 
-_UNIT_ALIAS = {"percent": "%", "mn": "m", "crore": "cr", "lakhs": "lakh", "": ""}
+_UNIT_ALIAS = {"percent": "%", "mn": "m", "crore": "cr", "crores": "cr",
+               "lakhs": "lakh", "l": "lakh", "": ""}
 
 
 def _norm_quantity(value: str, unit: str | None) -> str:
