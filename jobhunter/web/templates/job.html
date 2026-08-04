@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ job.title }} @ {{ job.company }}{% endblock %}
+{% block content %}
+
+<div class="panel">
+  <div class="row" style="justify-content:space-between;align-items:flex-start">
+    <div>
+      <h2 style="font-size:19px;text-transform:none;color:var(--fg);letter-spacing:-.2px;margin:0">
+        {{ job.title }}</h2>
+      <div class="muted">{{ job.company }} · {{ job.location or 'n/a' }}
+        · <span class="chip {{ job.work_mode }}">{{ job.work_mode }}</span>
+        · <span class="chip">{{ job.source }}</span>
+        {% if job.is_hidden %}<span class="chip hidden-src">hidden job market</span>{% endif %}
+        {% if job.salary %}· <span class="chip">{{ job.salary }}</span>{% endif %}
+      </div>
+      <div class="small muted" style="margin-top:6px">
+        seniority: {{ job.seniority_detected or '?' }} · growth stage: {{ job.growth_stage or '?' }}
+        · posted {{ job.posted_at or '?' }} · status <b>{{ job.status }}</b>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:36px;font-weight:700">{{ '%.1f'|format(job.match_score or 0) }}</div>
+      <span class="badge t-{{ 'Aplus' if job.tier == 'A+' else (job.tier or 'C') }}">{{ job.tier or '—' }}</span>
+    </div>
+  </div>
+  <div class="row" style="margin-top:14px">
+    <a class="btn" href="{{ job.url }}" target="_blank" rel="noopener">Open job posting ↗</a>
+    <button onclick="post('/api/jobs/{{ job.job_id }}/tailor','Generating tailored resume')">
+      Generate tailored resume + cover letter</button>
+    <button class="ghost" onclick="post('/api/jobs/{{ job.job_id }}/tailor?use_llm=false&cover_letter=false','Offline tailoring')">
+      Resume (offline)</button>
+    <button class="ghost" onclick="post('/api/jobs/{{ job.job_id }}/rescore','Re-scoring')">Re-score</button>
+    <button class="ghost" onclick="post('/api/jobs/{{ job.job_id }}/status?status=applied','Marking applied')">
+      Mark applied</button>
+  </div>
+</div>
+
+<div class="split">
+  <div class="panel">
+    <h2>Job description</h2>
+    <pre style="white-space:pre-wrap;max-height:640px">{{ job.description or 'No description captured.' }}</pre>
+  </div>
+
+  <div>
+    <div class="panel">
+      <h2>Score breakdown</h2>
+      {% set caps = {'skill_match':45,'seniority_alignment':20,'remote_flexibility':15,
+                     'domain_relevance':12,'company_growth':8} %}
+      {% for k, cap in caps.items() %}
+        {% set v = (job.breakdown or {}).get(k, 0) %}
+        <div style="margin-bottom:9px">
+          <div class="row small" style="justify-content:space-between">
+            <span>{{ k.replace('_',' ')|title }}</span>
+            <b>{{ '%.1f'|format(v) }}/{{ cap }}</b></div>
+          <span class="bar" style="display:block"><i style="width:{{ ((v/cap)*100)|round|int }}%"></i></span>
+        </div>
+      {% endfor %}
+      {% if job.llm_score is not none %}
+        <div class="small muted" style="margin-top:10px">
+          LLM score {{ '%.1f'|format(job.llm_score) }} via <span class="mono">{{ job.llm_model }}</span>
+          (blended 45% deterministic / 55% LLM)
+        </div>
+      {% endif %}
+    </div>
+
+    {% if job.llm_rationale %}
+    <div class="panel"><h2>Strategist rationale</h2>
+      <div class="small">{{ job.llm_rationale }}</div></div>
+    {% endif %}
+
+    <div class="panel"><h2>Matched strengths</h2>
+      {% for c in job.matched_competencies %}<span class="chip">{{ c }}</span>{% else %}
+      <span class="muted small">none detected</span>{% endfor %}</div>
+
+    <div class="panel"><h2>Gaps</h2>
+      {% for c in job.missing_keywords %}<span class="chip">{{ c }}</span>{% else %}
+      <span class="muted small">no material gaps</span>{% endfor %}</div>
+
+    <div class="panel"><h2>ATS keywords to mirror</h2>
+      {% for k in job.ats_keywords %}<span class="chip">{{ k }}</span>{% else %}
+      <span class="muted small">n/a</span>{% endfor %}</div>
+
+    <div class="panel"><h2>Generated documents</h2>
+      <div id="artifacts">
+      {% for a in artifacts %}
+        <div class="small" style="border-bottom:1px solid #1f2733;padding:5px 0">
+          <a href="/download?path={{ a.path | urlencode }}" download>⬇ {{ a.kind }}</a>
+          {% if a.path.endswith('.html') or a.path.endswith('.pdf') %}
+          <a href="/download?path={{ a.path | urlencode }}&inline=1" target="_blank"
+             rel="noopener">👁 preview</a>
+          {% endif %}
+          {% if a.ats_score %}<span class="chip">ATS {{ a.ats_score }}%</span>{% endif %}
+          <span class="muted mono" style="font-size:11px">{{ a.model_used }}</span>
+        </div>
+      {% else %}<div class="muted small">Nothing generated yet.</div>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+async function refreshArtifacts(){
+  const box=document.getElementById('artifacts');
+  if(!box) return;
+  try{
+    const rows=await (await fetch('/api/artifacts?job_id={{ job.job_id }}')).json();
+    if(!Array.isArray(rows) || !rows.length) return;
+    box.innerHTML=rows.map(a=>
+      '<div class="small" style="border-bottom:1px solid #1f2733;padding:5px 0">'+
+      '<a href="'+esc(a.download_url)+'" download>⬇ '+esc(a.kind)+'</a> '+
+      (a.preview_url?'<a href="'+esc(a.preview_url)+'" target="_blank" rel="noopener">👁 preview</a> ':'')+
+      (a.ats_score?'<span class="chip">ATS '+esc(a.ats_score)+'%</span> ':'')+
+      '<span class="muted mono" style="font-size:11px">'+esc(a.model_used||'')+'</span></div>'
+    ).join('');
+  }catch(e){/* panel simply stays as rendered */}
+}
+</script>
+{% endblock %}

@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% macro tier_badge(t) -%}
+  <span class="badge t-{{ 'Aplus' if t == 'A+' else (t or 'C') }}">{{ t or '—' }}</span>
+{%- endmacro %}
+
+<div class="grid cards">
+  <div class="card"><div class="k">Total Jobs</div><div class="v">{{ stats.total_jobs }}</div></div>
+  <div class="card"><div class="k">Hidden Market</div>
+    <div class="v" style="color:var(--gold)">{{ stats.hidden_jobs }}</div></div>
+  <div class="card"><div class="k">Tier A+ / A</div>
+    <div class="v" style="color:var(--good)">{{ stats.tier_a_plus }} / {{ stats.tier_a }}</div></div>
+  <div class="card"><div class="k">Remote / Hybrid</div>
+    <div class="v">{{ stats.remote }} / {{ stats.hybrid }}</div></div>
+  <div class="card"><div class="k">Resumes Built</div><div class="v">{{ stats.resumes }}</div></div>
+  <div class="card"><div class="k">Scored</div><div class="v">{{ stats.scored }}</div></div>
+</div>
+
+<div class="panel">
+  <div class="row">
+    <b>Daily engine</b>
+    <span class="pill {{ 'on' if llm_ready else 'off' }}">
+      OpenRouter {{ 'connected' if llm_ready else 'no API key — deterministic mode' }}</span>
+    <span class="pill {{ 'on' if running else 'off' }}">
+      {{ 'run in progress' if running else 'idle' }}</span>
+    <button onclick="post('/api/run?deep=12&resumes=5&min_score=60','Deep search + resume generation')">
+      ▶ Run deep search now</button>
+    <button class="ghost" onclick="post('/api/run?deep=0&resumes=3&use_llm=false','Offline harvest')">
+      Harvest only (no LLM)</button>
+    <button class="ghost" onclick="location.reload()">⟳ Refresh</button>
+  </div>
+  {% if budget %}
+  <div class="row" style="margin-top:12px;gap:22px">
+    <div style="flex:1;min-width:240px">
+      <div class="row small" style="justify-content:space-between">
+        <span class="muted">API requests used today</span>
+        <b>{{ budget.used_today }} / {{ budget.daily_limit }}</b>
+      </div>
+      <span class="bar" style="display:block;margin-top:4px">
+        <i style="width:{{ ((budget.used_today / budget.daily_limit) * 100)|round|int }}%;
+                  background:{{ 'linear-gradient(90deg,#d29922,#f85149)' if budget.remaining_today < 8
+                                else 'linear-gradient(90deg,#2f81f7,#3fb950)' }}"></i>
+      </span>
+      <div class="small muted" style="margin-top:4px">
+        {{ budget.remaining_today }} left ·
+        spent on {% for t, n in budget.per_task.items() %}{{ t }} {{ n }}{% if not loop.last %}, {% endif %}{% else %}nothing yet{% endfor %} ·
+        held back for {% for t, n in budget.reserved.items() %}{{ t }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}
+      </div>
+    </div>
+    <div class="small muted">
+      <div>cache: <b>{{ budget.cache.entries }}</b> entries,
+        <b style="color:var(--good)">{{ budget.cache.hits_served }}</b> hits served (0-cost)</div>
+      <div>caps: {{ budget.run_limit }}/run</div>
+      {% if budget.key_info %}
+        <div>key: {{ 'free tier' if budget.key_info.is_free_tier else 'paid' }}
+          → {{ budget.key_info.daily_request_limit }} req/day</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  <div class="small muted" style="margin-top:12px">
+    <div class="muted" style="margin-bottom:3px">Model chains are discovered live from
+      OpenRouter's free-model catalog and ranked per task — nothing is hardcoded.</div>
+    {% for task, chain in model_chain.items() %}
+      <div><b>{{ task }}</b>: <span class="mono">{{ chain | join(' → ') }}</span></div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="split">
+  <div class="panel">
+    <h2>Matches <span class="small muted">({{ match_count if match_count is defined else jobs|length }})</span></h2>
+    <form class="filters" method="get" action="/">
+      <input type="number" step="1" name="min_score" value="{{ filters.min_score }}" placeholder="min score" style="width:110px">
+      <select name="tier">
+        <option value="">any tier</option>
+        {% for t in ['A+','A','B','C'] %}
+        <option value="{{ t }}" {{ 'selected' if filters.tier == t }}>{{ t }}</option>{% endfor %}
+      </select>
+      <select name="mode">
+        <option value="">any mode</option>
+        {% for m in ['remote','hybrid','unknown','onsite'] %}
+        <option value="{{ m }}" {{ 'selected' if filters.mode == m }}>{{ m }}</option>{% endfor %}
+      </select>
+      <select name="source">
+        <option value="">any source</option>
+        {% for s in sources %}<option value="{{ s }}" {{ 'selected' if filters.source == s }}>{{ s }}</option>{% endfor %}
+      </select>
+      <input name="q" value="{{ filters.q }}" placeholder="title / company">
+      <label class="small muted"><input type="checkbox" name="hidden" value="true"
+        {{ 'checked' if filters.hidden }}> hidden only</label>
+      <button type="submit">Filter</button>
+    </form>
+
+    <table style="margin-top:12px">
+      <thead><tr>
+        <th>Score</th><th>Tier</th><th>Role</th><th>Company</th><th>Mode</th><th>Source</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for j in jobs %}
+        <tr>
+          <td>
+            <div class="row" style="gap:6px">
+              <b>{{ '%.1f'|format(j.match_score or 0) }}</b>
+              <span class="bar"><i style="width:{{ (j.match_score or 0)|round|int }}%"></i></span>
+            </div>
+          </td>
+          <td>{{ tier_badge(j.tier) }}</td>
+          <td>
+            <a href="/job/{{ j.job_id }}">{{ j.title[:64] }}</a>
+            {% if j.is_hidden %}<span class="chip hidden-src">hidden</span>{% endif %}
+            <div class="small muted">{{ (j.location or '')[:52] }}</div>
+          </td>
+          <td>{{ j.company[:26] }}</td>
+          <td><span class="chip {{ j.work_mode }}">{{ j.work_mode }}</span></td>
+          <td class="small muted">{{ j.source }}</td>
+          <td class="small">
+            <a href="{{ j.url }}" target="_blank" rel="noopener">JD ↗</a>
+            <a href="#" onclick="post('/api/jobs/{{ j.job_id }}/tailor?use_llm=false&amp;cover_letter=false','Resume (offline)');return false;">resume</a>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="muted">No jobs yet — hit <b>Run deep search now</b>.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div>
+    <div class="panel">
+      <h2>Last run</h2>
+      {% if last_report %}
+        <div class="small">
+          <div><b>{{ last_report.generated_at }}</b></div>
+          <div class="muted">found {{ last_report.jobs_found }} → {{ last_report.jobs_after_dedupe }} unique
+            ({{ last_report.jobs_new }} new) · scored {{ last_report.jobs_scored }}
+            · {{ last_report.resumes_built }} resumes
+            · LLM {{ 'on' if last_report.llm_enabled else 'off' }}</div>
+          <div style="margin-top:8px">
+            {% for name, n in (last_report.sources_ok or {}).items() %}
+              <span class="chip">{{ name }} {{ n }}</span>{% endfor %}
+          </div>
+          {% if last_report.sources_failed %}
+          <div style="margin-top:6px">
+            {% for name, err in last_report.sources_failed.items() %}
+              <div class="small" style="color:var(--bad)">{{ name }}: {{ err[:90] }}</div>{% endfor %}
+          </div>{% endif %}
+        </div>
+      {% else %}<div class="muted small">No run recorded yet.</div>{% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>Sources harvested</h2>
+      {% for s in stats.sources %}
+        <div class="row small" style="justify-content:space-between;border-bottom:1px solid #1f2733;padding:4px 0">
+          <span>{{ s.source }}</span><b>{{ s.n }}</b></div>
+      {% else %}<div class="muted small">none yet</div>{% endfor %}
+    </div>
+
+    <div class="panel">
+      <h2>Model usage</h2>
+      {% for m in stats.model_usage %}
+        <div class="row small" style="justify-content:space-between;border-bottom:1px solid #1f2733;padding:4px 0">
+          <span class="mono">{{ m.model }}</span>
+          <b style="color:{{ 'var(--good)' if m.ok == m.total else 'var(--warn)' }}">{{ m.ok }}/{{ m.total }}</b>
+        </div>
+      {% else %}<div class="muted small">no LLM calls yet</div>{% endfor %}
+    </div>
+
+    <div class="panel">
+      <h2>Recent artifacts</h2>
+      {% for a in artifacts %}
+        <div class="small" style="border-bottom:1px solid #1f2733;padding:5px 0">
+          <a href="/download?path={{ a.path | urlencode }}" download>⬇ {{ a.kind }}</a>
+          <span class="muted">— {{ (a.company or '')[:20] }} / {{ (a.title or '')[:34] }}</span>
+          {% if a.ats_score %}<span class="chip">ATS {{ a.ats_score }}%</span>{% endif %}
+        </div>
+      {% else %}<div class="muted small">none yet</div>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

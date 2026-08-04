@@ -1,0 +1,400 @@
+"""Command line interface.
+
+  python -m jobhunter.cli daily            # full harvest -> score -> tailor
+  python -m jobhunter.cli search           # harvest + score only
+  python -m jobhunter.cli list --min 70    # show stored matches
+  python -m jobhunter.cli tailor <job_id>  # build resume for one job
+  python -m jobhunter.cli rescore <job_id>
+  python -m jobhunter.cli serve            # web dashboard
+  python -m jobhunter.cli schedule         # daily scheduler
+  python -m jobhunter.cli doctor           # environment / connectivity check
+  python -m jobhunter.cli sources          # list registered sources
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import os
+import sys
+
+from .config import OUTPUT_DIR, load_model_config, load_profile, load_search_matrix
+from .db import Store
+from .llm import LLMError, OpenRouterClient
+from .pipeline import Pipeline
+from .sources import REGISTRY
+
+
+def _setup_logging(verbose: bool) -> None:
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.INFO,
+        format="%(asctime)s %(levelname)-7s %(name)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+
+def _fmt_row(j: dict) -> str:
+    score = j.get("match_score")
+    score_s = f"{score:5.1f}" if score is not None else "  n/a"
+    flag = "H" if j.get("is_hidden") else " "
+    return (f"{score_s} {j.get('tier') or '-':<2} {flag} {j['job_id']}  "
+            f"{j['title'][:46]:<46} {j['company'][:22]:<22} "
+            f"{(j.get('work_mode') or '?'):<7} {j['source']}")
+
+
+def cmd_daily(args: argparse.Namespace) -> int:
+    pipe = Pipeline()
+    report = pipe.run_daily(
+        deep_top_n=args.deep, resume_top_n=args.resumes, min_score=args.min_score,
+        use_llm=not args.no_llm, only=args.only, skip=args.skip,
+        with_cover_letter=not args.no_cover,
+    )
+    print("\n" + "=" * 100)
+    print(f"RUN #{report.run_id} | found {report.jobs_found} -> "
+          f"{report.jobs_after_dedupe} unique ({report.jobs_new} new) | "
+          f"scored {report.jobs_scored} | resumes {report.resumes_built} | "
+          f"LLM {'ON' if report.llm_enabled else 'OFF'}")
+    print("=" * 100)
+    for name, n in sorted(report.sources_ok.items(), key=lambda kv: -kv[1]):
+        print(f"  {name:<18} {n:>4}")
+    for name, err in report.sources_failed.items():
+        print(f"  {name:<18} FAILED: {err[:90]}")
+
+    print("\nSHORTLIST (tailored resumes generated)")
+    print("-" * 100)
+    for item in report.shortlist:
+        print(f"[{item['match_score']:5.1f} {item['tier']:<2}] {item['title'][:52]} @ {item['company'][:26]}")
+        print(f"        {item['work_mode']} | {item['location'][:40]} | {item['source']}"
+              f"{' | HIDDEN' if item['hidden'] else ''}")
+        print(f"        ATS alignment {item['ats_alignment']}% via {item['generated_by']}")
+        if item["rationale"]:
+            print(f"        {item['rationale'][:150]}")
+        print(f"        {item['files'].get('docx','')}")
+        print(f"        {item['url'][:110]}")
+        print()
+    for e in report.errors:
+        print(f"  ERROR: {e}")
+    print(f"Artifacts -> {OUTPUT_DIR}")
+    return 0
+
+
+def cmd_search(args: argparse.Namespace) -> int:
+    pipe = Pipeline()
+    raw, ok, failed = pipe.harvest(only=args.only, skip=args.skip)
+    jobs = pipe.hydrate(pipe.prefilter(pipe.dedupe(raw)))
+    total, new = pipe.store.upsert_jobs(jobs)
+    scored = pipe.score_jobs(jobs, deep_top_n=args.deep, use_llm=not args.no_llm)
+    print(f"\nharvested {len(raw)} -> {total} unique ({new} new); scored {len(scored)}")
+    for name, n in sorted(ok.items(), key=lambda kv: -kv[1]):
+        print(f"  {name:<18} {n:>4}")
+    for name, err in failed.items():
+        print(f"  {name:<18} FAILED: {err[:80]}")
+    print("\nTOP MATCHES")
+    for job, score in scored[:args.limit]:
+        print(_fmt_row({**job.to_dict(), "match_score": score.match_score, "tier": score.tier}))
+    return 0
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    rows = Store().list_jobs(min_score=args.min_score, tier=args.tier, work_mode=args.mode,
+                             hidden_only=args.hidden, source=args.source, limit=args.limit,
+                             query=args.query)
+    if args.json:
+        print(json.dumps(rows, indent=2, default=str))
+        return 0
+    print(f"{'SCORE':>5} T  H JOB_ID            TITLE                                          "
+          f"COMPANY                MODE    SOURCE")
+    for r in rows:
+        print(_fmt_row(r))
+    print(f"\n{len(rows)} rows")
+    return 0
+
+
+def cmd_tailor(args: argparse.Namespace) -> int:
+    pipe = Pipeline()
+    out = pipe.tailor_existing(args.job_id, use_llm=not args.no_llm,
+                               with_cover_letter=not args.no_cover)
+    resume = out["resume"]
+    print(f"Generated by : {resume.generated_by}")
+    print(f"ATS alignment: {resume.ats_alignment_score}%")
+    print(f"Target title : {resume.target_title}\n")
+    print("Summary:", resume.professional_summary, "\n")
+    for k, v in out["files"].items():
+        print(f"  {k:<6} {v}")
+    if resume.keywords_intentionally_omitted:
+        print("\nNot claimed (no evidence in profile):",
+              ", ".join(resume.keywords_intentionally_omitted))
+    for n in resume.tailoring_notes:
+        print(f"  note: {n}")
+    return 0
+
+
+def cmd_rescore(args: argparse.Namespace) -> int:
+    score = Pipeline().rescore_existing(args.job_id, use_llm=not args.no_llm)
+    print(json.dumps(score.to_dict(), indent=2))
+    return 0
+
+
+def cmd_stats(_: argparse.Namespace) -> int:
+    print(json.dumps(Store().stats(), indent=2))
+    return 0
+
+
+def cmd_sources(_: argparse.Namespace) -> int:
+    matrix = load_search_matrix()
+    print(f"{'SOURCE':<18}{'HIDDEN':<8}NOTES")
+    for name, cls in REGISTRY.items():
+        note = ""
+        if name == "jobspy":
+            enabled = (matrix.get("jobspy") or {}).get("enabled")
+            try:
+                import jobspy  # noqa: F401
+                note = f"python-jobspy installed; enabled={enabled}"
+            except ImportError:
+                note = "install `python-jobspy` for LinkedIn/Indeed/Glassdoor"
+        elif name == "ycombinator":
+            roles = (matrix.get("ycombinator") or {}).get("roles") or []
+            note = f"YC Work at a Startup; roles: {', '.join(roles) or 'default'}"
+        elif getattr(cls, "hidden", False):
+            n = len((matrix.get("ats") or {}).get(name) or [])
+            note = f"{n} company portals configured"
+        print(f"{name:<18}{'yes' if getattr(cls,'hidden',False) else 'no':<8}{note}")
+    return 0
+
+
+def cmd_doctor(args: argparse.Namespace) -> int:
+    print("== config ==")
+    profile = load_profile()
+    matrix = load_search_matrix()
+    cfg = load_model_config()
+    print(f"  profile        : {profile.name} | {len(profile.competencies)} competencies | "
+          f"{len(profile.experience)} roles | {len(profile.all_bullets())} bullets")
+    print(f"  target roles   : {len(matrix.get('target_roles', []))}")
+    print(f"  keyword seeds  : {len(matrix.get('keyword_seeds', []))}")
+    ats = matrix.get("ats") or {}
+    print(f"  hidden portals : " + ", ".join(f"{k}={len(v)}" for k, v in ats.items()))
+
+    print("\n== openrouter (dynamic model discovery) ==")
+    print(f"  api key        : {'set (' + cfg.api_key[:12] + '…)' if cfg.api_key else 'MISSING'}")
+    print(f"  site           : {cfg.site_name} <{cfg.site_url}>")
+    try:
+        cards = cfg.catalog.cards()
+        print(f"  catalog        : {len(cards)} free text-chat models via {cfg.catalog.origin}")
+    except Exception as exc:  # noqa: BLE001
+        print(f"  catalog        : discovery failed ({exc}); static fallback in use")
+    for task in ("parse", "match", "resume"):
+        print(f"  {task:<7} chain  : {' → '.join(cfg.chain_for(task)[:3])}")
+
+    client = OpenRouterClient(cfg, logger=Store().log_llm)
+    print("\n== api budget ==")
+    if client.enabled:
+        st = client.budget_state()
+        print(f"  today          : {st['used_today']}/{st['daily_limit']} calls used "
+              f"({st['remaining_today']} left)")
+        print(f"  per run / min  : {st['run_limit']} / {client.budget.rpm_limit}")
+        print(f"  cache          : {st['cache']['entries']} entries, "
+              f"{st['cache']['hits_served']} hits served (each hit = 0 calls)")
+        ki = st.get("key_info") or {}
+        if ki:
+            print(f"  key tier       : {'free' if ki.get('is_free_tier') else 'paid'} "
+                  f"→ {ki.get('daily_request_limit')} req/day detected")
+    else:
+        print("  no key — deterministic scoring + offline tailoring still work fully")
+
+    if client.enabled and not args.no_live:
+        try:
+            r = client.chat("parse", [{"role": "user", "content": "Reply with exactly: OK"}],
+                            max_tokens=12)
+            print(f"  live test      : PASS via {r.model}"
+                  f"{' [cached, 0 calls]' if r.cached else ''} → {r.text.strip()[:40]!r}")
+        except LLMError as exc:
+            print(f"  live test      : FAIL — {exc}")
+
+    print("\n== dependencies ==")
+    for mod, why in [("requests", "http"), ("yaml", "config"), ("docx", "resume .docx"),
+                     ("fastapi", "web dashboard"), ("uvicorn", "web server"),
+                     ("apscheduler", "daily schedule"), ("jobspy", "LinkedIn/Indeed/Glassdoor"),
+                     ("dotenv", ".env loading")]:
+        try:
+            __import__(mod)
+            print(f"  {mod:<12} OK    ({why})")
+        except ImportError:
+            print(f"  {mod:<12} MISSING ({why})")
+
+    from .resume.pdf import backend_status
+    pdf = backend_status()
+    if pdf["chrome"]:
+        print(f"  pdf engine   OK    (chrome: {pdf['chrome']})")
+    elif pdf["weasyprint"]:
+        print("  pdf engine   OK    (weasyprint)")
+    else:
+        print("  pdf engine   MISSING (install Chrome/Chromium or set JOBHUNTER_CHROME; "
+              "the .html resume can still be printed to PDF from a browser)")
+
+    print("\n== storage ==")
+    store = Store()
+    print(f"  db             : {store.path}")
+    print(f"  output         : {OUTPUT_DIR}")
+    print("  stats          : " + json.dumps({k: v for k, v in store.stats().items()
+                                              if not isinstance(v, list)}))
+    return 0
+
+
+def cmd_models(args: argparse.Namespace) -> int:
+    cfg = load_model_config()
+    cat = cfg.catalog
+    cat.cards(refresh=args.refresh)
+    print(f"discovery source: {cat.origin} | free text-chat models: {len(cat.cards())}")
+    tasks = [args.task] if args.task else ["parse", "match", "resume"]
+    for task in tasks:
+        print(f"\n== {task.upper()} chain (dynamically ranked, no hardcoded IDs) ==")
+        print(f"{'#':<3}{'SCORE':>7}  {'PARAM':>7} {'CTX':>9} {'MAXOUT':>8} {'RSN':<4}{'JSON':<5} MODEL")
+        for i, row in enumerate(cat.describe(task)[:args.limit], 1):
+            print(f"{i:<3}{row['score']:>7.2f}  {row['params_b'] or '-':>6}B {row['context']:>9,} "
+                  f"{row['max_out']:>8,} {'y' if row['reasoning'] else '-':<4}"
+                  f"{'y' if row['json'] else '-':<5} {row['id']}")
+        print(f"    active chain -> {' → '.join(cfg.chain_for(task))}")
+    return 0
+
+
+def cmd_budget(args: argparse.Namespace) -> int:
+    client = OpenRouterClient(load_model_config(), logger=Store().log_llm)
+    if args.reset_run:
+        client.budget.reset_run()
+    st = client.budget_state()
+    print(f"day               : {st['day']}")
+    print(f"calls used today  : {st['used_today']} / {st['daily_limit']}  "
+          f"({st['remaining_today']} left)")
+    print(f"per-run cap       : {st['run_limit']}  (used {st['used_this_run']})")
+    print(f"per-minute cap    : {client.budget.rpm_limit}")
+    print(f"reserved per task : {st['reserved']}")
+    print(f"by task today     : {st['per_task'] or '{}'}")
+    print(f"cache             : {st['cache']['entries']} entries, "
+          f"{st['cache']['hits_served']} hits served (each hit = 0 API calls)")
+    ki = st.get("key_info") or {}
+    if ki:
+        print(f"key tier          : {'free' if ki.get('is_free_tier') else 'paid'} "
+              f"-> {ki.get('daily_request_limit')} req/day detected")
+    rel = st.get("reliability") or []
+    if rel:
+        print("\nmodel reliability (learned across runs — unreliable models are demoted):")
+        print(f"  {'TASK':<8}{'OK':>4}{'BADJSON':>9}  MODEL")
+        for r in rel:
+            flag = "  <- demoted" if r["model"] in client.reliability.unreliable(r["task"]) else ""
+            print(f"  {r['task']:<8}{r['ok']:>4}{r['bad_json']:>9}  {r['model']}{flag}")
+
+    print("\nestimated cost of one daily run (batched):")
+    policy = client.cfg.budget
+    bs = int(policy.get("batch_match_size", 6))
+    deep, res = int(os.getenv("JOBHUNTER_DEEP_N", 12)), int(os.getenv("JOBHUNTER_RESUMES", 5))
+    print(f"  deep scoring : ceil({deep}/{bs}) = {-(-deep // bs)} calls (batched triage)")
+    print(f"  resumes      : {res} calls")
+    print(f"  cover letters: {res} calls (use --no-cover to skip)")
+    print(f"  TOTAL        : {-(-deep // bs) + res * 2} calls "
+          f"(vs {deep * 2 + res * 3} unbatched)")
+    return 0
+
+
+def cmd_serve(args: argparse.Namespace) -> int:
+    import uvicorn
+    uvicorn.run("jobhunter.web.app:app", host=args.host, port=args.port, reload=args.reload)
+    return 0
+
+
+def cmd_schedule(args: argparse.Namespace) -> int:
+    from .scheduler import run_scheduler
+    run_scheduler(hour=args.hour, minute=args.minute, run_now=args.now)
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="jobhunter", description=__doc__,
+                                formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("-v", "--verbose", action="store_true")
+    sub = p.add_subparsers(dest="command", required=True)
+
+    def add_source_flags(sp: argparse.ArgumentParser) -> None:
+        sp.add_argument("--only", nargs="*", help=f"restrict sources: {', '.join(REGISTRY)}")
+        sp.add_argument("--skip", nargs="*", help="exclude sources")
+        sp.add_argument("--no-llm", action="store_true", help="deterministic only, zero API calls")
+
+    d = sub.add_parser("daily", help="full pipeline: harvest, score, tailor resumes")
+    add_source_flags(d)
+    d.add_argument("--deep", type=int, default=12, help="jobs to deep-score with the LLM")
+    d.add_argument("--resumes", type=int, default=5, help="resumes to generate")
+    d.add_argument("--min-score", type=float, default=60.0)
+    d.add_argument("--no-cover", action="store_true", help="skip cover letters")
+    d.set_defaults(func=cmd_daily)
+
+    s = sub.add_parser("search", help="harvest and score only")
+    add_source_flags(s)
+    s.add_argument("--deep", type=int, default=0)
+    s.add_argument("--limit", type=int, default=25)
+    s.set_defaults(func=cmd_search)
+
+    l = sub.add_parser("list", help="list stored jobs")
+    l.add_argument("--min-score", type=float, default=0)
+    l.add_argument("--tier", choices=["A+", "A", "B", "C"])
+    l.add_argument("--mode", choices=["remote", "hybrid", "onsite", "unknown"])
+    l.add_argument("--source")
+    l.add_argument("--query")
+    l.add_argument("--hidden", action="store_true", help="hidden job market only")
+    l.add_argument("--limit", type=int, default=50)
+    l.add_argument("--json", action="store_true")
+    l.set_defaults(func=cmd_list)
+
+    t = sub.add_parser("tailor", help="generate tailored resume for a stored job")
+    t.add_argument("job_id")
+    t.add_argument("--no-llm", action="store_true")
+    t.add_argument("--no-cover", action="store_true")
+    t.set_defaults(func=cmd_tailor)
+
+    r = sub.add_parser("rescore", help="re-run scoring for a stored job")
+    r.add_argument("job_id")
+    r.add_argument("--no-llm", action="store_true")
+    r.set_defaults(func=cmd_rescore)
+
+    m = sub.add_parser("models", help="show dynamically discovered free models and task chains")
+    m.add_argument("--task", choices=["parse", "match", "resume"])
+    m.add_argument("--limit", type=int, default=10)
+    m.add_argument("--refresh", action="store_true", help="bypass the catalog cache")
+    m.set_defaults(func=cmd_models)
+
+    b = sub.add_parser("budget", help="API request budget, cache stats and run cost estimate")
+    b.add_argument("--reset-run", action="store_true")
+    b.set_defaults(func=cmd_budget)
+
+    sub.add_parser("stats", help="database statistics").set_defaults(func=cmd_stats)
+    sub.add_parser("sources", help="list registered sources").set_defaults(func=cmd_sources)
+    doc = sub.add_parser("doctor", help="environment and connectivity check")
+    doc.add_argument("--no-live", action="store_true", help="skip the live LLM ping (saves 1 call)")
+    doc.set_defaults(func=cmd_doctor)
+
+    w = sub.add_parser("serve", help="run the web dashboard")
+    w.add_argument("--host", default="127.0.0.1")
+    w.add_argument("--port", type=int, default=8080)
+    w.add_argument("--reload", action="store_true")
+    w.set_defaults(func=cmd_serve)
+
+    sc = sub.add_parser("schedule", help="run the daily scheduler in the foreground")
+    sc.add_argument("--hour", type=int, default=7)
+    sc.add_argument("--minute", type=int, default=30)
+    sc.add_argument("--now", action="store_true", help="also run immediately on start")
+    sc.set_defaults(func=cmd_schedule)
+
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    _setup_logging(args.verbose)
+    try:
+        return int(args.func(args) or 0)
+    except KeyboardInterrupt:
+        print("\ninterrupted")
+        return 130
+
+
+if __name__ == "__main__":
+    sys.exit(main())

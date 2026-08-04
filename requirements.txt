@@ -1,0 +1,25 @@
+# --- core ---
+requests>=2.31
+PyYAML>=6.0
+python-dotenv>=1.0
+python-docx>=1.1
+
+# --- web dashboard ---
+fastapi>=0.110
+uvicorn[standard]>=0.29
+jinja2>=3.1
+
+# --- daily automation ---
+APScheduler>=3.10
+tzdata>=2024.1
+
+# --- optional: LinkedIn / Indeed / Glassdoor / Google Jobs scraping ---
+# The pipeline degrades gracefully if this is absent.
+python-jobspy>=1.1.80
+
+# --- optional: PDF export of the designed resume ---
+# Only used if headless Chrome/Chromium is not found. The pipeline degrades gracefully
+# (skips the .pdf artifact) if neither backend is installed.
+weasyprint>=62.0
+# Reads the generated PDF back to confirm no content was silently truncated.
+pypdf>=4.0

@@ -1,0 +1,220 @@
+# =============================================================================
+# CANDIDATE GROUND-TRUTH PROFILE  (single source of truth)
+# Derived from "Ashwini CV (Latest).docx" + "Ashwini IIMUdaipur College (Resume).docx"
+# Every bullet below is factual. The resume generator may RE-ORDER and RE-PHRASE
+# these facts for a given JD, but must never invent new ones.
+# =============================================================================
+
+name: Ashwini H. Pathode
+headline: Operations Transformation, Continuous Improvement & Strategic Procurement Professional
+current_title: Private Banking Manager, ICICI Bank
+location: India
+email: pathodeashwini1306@gmail.com   # <-- replace with real email
+phone: "+91-9075316335"               # <-- replace with real phone
+linkedin: ""                          # <-- optional
+years_experience: 5
+
+summary: >-
+  Procurement & Operations Transformation professional with 5+ years of experience delivering
+  cost optimization and spend efficiency across direct and indirect categories. Proven track
+  record of Rs.1+ Cr savings through sourcing analytics, process redesign, Lean deployment and
+  SAP-enabled controls. Experienced in KPI-led procurement diagnostics, operating model
+  improvement, compliance alignment and cross-functional stakeholder management. MBA
+  (IIM Udaipur) with exposure to digital procurement, Industry 4.0 and GenAI-led transformation.
+
+# ---------------------------------------------------------------------------
+# COMPETENCY GRAPH — used by the deterministic scorer.
+# weight = strategic importance to the candidate's target career track (1-10)
+# aliases = surface forms that may appear in a job description
+# ---------------------------------------------------------------------------
+competencies:
+  - name: Strategic Sourcing & Procurement
+    weight: 10
+    aliases: [strategic sourcing, procurement, sourcing, purchasing, category management,
+              supplier management, vendor management, supplier performance, rfp, rfq, rfx,
+              e-sourcing, contract negotiation, indirect spend, direct spend, s2p,
+              source-to-pay, procure-to-pay, p2p, ariba, coupa, tail spend, supplier onboarding]
+  - name: Spend Analytics & Cost Optimization
+    weight: 10
+    aliases: [spend analytics, spend analysis, cost optimization, cost reduction, cost savings,
+              cost diagnostics, should-cost, should cost, value engineering, cost avoidance,
+              savings pipeline, tco, total cost of ownership, margin improvement, cost per unit]
+  - name: Continuous Improvement & Lean Six Sigma
+    weight: 10
+    aliases: [continuous improvement, lean, six sigma, lean six sigma, green belt, black belt,
+              kaizen, 5s, dmaic, oee, waste elimination, muda, gemba, tpm, smed,
+              time motion study, line balancing, standard work, poka yoke]
+  - name: Process Excellence & Operating Model
+    weight: 9
+    aliases: [process excellence, process improvement, process redesign, business process,
+              operating model, target operating model, tom, process mapping, value stream,
+              value stream mapping, sop, standardization, process reengineering, bpr,
+              operational excellence, opex, transformation, change management,
+              root cause analysis, 5-why, why-why, fishbone, ishikawa, capa]
+  - name: Business / Strategy & Operations Analytics
+    weight: 9
+    aliases: [business operations, biz ops, strategy and operations, strategy & operations,
+              business analyst, data analysis, data analytics, kpi, kpis, metrics, dashboard,
+              reporting, sql, excel, modeling, forecasting, insights, decision intelligence,
+              business intelligence, power bi, tableau, looker]
+  - name: Workflow Automation & Digital Transformation
+    weight: 8
+    aliases: [automation, workflow automation, rpa, digital transformation, digitization,
+              digitalization, industry 4.0, ai, genai, generative ai, llm, machine learning,
+              process automation, low-code, systems implementation, erp implementation]
+  - name: SAP & Enterprise Systems
+    weight: 8
+    aliases: [sap, erp, s/4hana, sap mm, sap pm, asset care, maintenance task list,
+              preventive maintenance, asset management, cmms, master data, plant maintenance]
+  - name: Program & Project Management
+    weight: 8
+    aliases: [project management, program management, pmo, agile, scrum, scrum master, jira,
+              stakeholder management, cross-functional, roadmap, governance, workstream,
+              project delivery, sprint]
+  - name: Wealth / Portfolio Management & Financial Services
+    weight: 7
+    aliases: [wealth management, private banking, portfolio management, aum, investment,
+              relationship manager, crm, client retention, financial services, banking,
+              risk assessment, nism, mutual funds, hni]
+  - name: Compliance, Risk & Controls
+    weight: 7
+    aliases: [compliance, aml, anti-money laundering, kyc, controls, internal controls, audit,
+              regulatory, governance, risk management, iso, iso 14001, ehs, sustainability, esg]
+  - name: Supply Chain & Manufacturing Operations
+    weight: 7
+    aliases: [supply chain, scm, logistics, planning, s&op, inventory, warehouse,
+              manufacturing, plant operations, production, shop floor, fmcg, agribusiness,
+              food safety, quality, qms, capacity planning, demand planning]
+  - name: Leadership & Stakeholder Communication
+    weight: 6
+    aliases: [leadership, team lead, people management, mentoring, training, presentation,
+              executive communication, storytelling, influence, consulting, client facing,
+              c-suite, senior leadership, business partnering]
+
+# ---------------------------------------------------------------------------
+# SENIORITY CALIBRATION
+# ---------------------------------------------------------------------------
+seniority:
+  target_levels: [associate, analyst, senior analyst, specialist, consultant, senior consultant,
+                  lead, manager, senior manager, assistant manager, deputy manager]
+  ideal_yoe_range: [3, 8]
+  reject_levels: [intern, trainee, apprentice, fresher, director, vice president, vp, svp,
+                  head of, chief, cxo, ceo, cfo, coo, cto, partner, principal, fellow]
+
+# ---------------------------------------------------------------------------
+# EDUCATION
+# ---------------------------------------------------------------------------
+education:
+  - degree: Master of Business Administration (MBA)
+    institution: Indian Institute of Management (IIM) Udaipur
+    location: Udaipur, India
+    dates: 2023 - 2025
+    details: "Senator, IIMU Student Affairs; Member A4 (Alumni Affairs) - bridge to 2,200+ alumni base"
+  - degree: B.Tech, Chemical Technology
+    institution: Laxminarayan Institute of Technology (LIT), Nagpur
+    location: Nagpur, India
+    dates: 2015 - 2019
+    details: "82.30%"
+
+# ---------------------------------------------------------------------------
+# EXPERIENCE — bullets carry tags so the tailoring engine can select the most
+# JD-relevant subset (ATS best practice: 4-6 bullets per role).
+# ---------------------------------------------------------------------------
+experience:
+  - company: ICICI Bank
+    title: Private Banking Manager
+    location: India
+    start: 2025-06
+    end: null
+    dates: June 2025 - Present
+    bullets:
+      - text: "Managed a Rs.140M (~$1.7M) HNI portfolio, improving AUM, client retention, turnaround time and compliance through structured portfolio and process analysis."
+        tags: [Wealth / Portfolio Management & Financial Services, Business / Strategy & Operations Analytics]
+      - text: "Grew AUM by Rs.110M by delivering analytics-led investment insights built on Power BI dashboards and CRM data."
+        tags: [Business / Strategy & Operations Analytics, Wealth / Portfolio Management & Financial Services]
+      - text: "Improved compliance posture and reduced turnaround time by re-engineering high-value transaction workflows and strengthening AML controls."
+        tags: [Compliance, Risk & Controls, Process Excellence & Operating Model, Workflow Automation & Digital Transformation]
+      - text: "Ran portfolio risk assessments and behavioural analytics that lifted client retention by 15%."
+        tags: [Compliance, Risk & Controls, Business / Strategy & Operations Analytics]
+      - text: "Partnered with credit, operations and compliance stakeholders to standardise client onboarding SOPs and eliminate rework."
+        tags: [Leadership & Stakeholder Communication, Process Excellence & Operating Model]
+
+  - company: Bunge India Pvt Ltd
+    title: Executive - Continuous Improvement / Operations
+    location: Kandla, India
+    start: 2019-07
+    end: 2022-06
+    dates: July 2019 - June 2022
+    bullets:
+      - text: "Delivered Rs.20M (~$240K) annualised cost savings across direct spend (raw materials, utilities) and indirect spend (maintenance, manpower, consumables) via structured cost diagnostics and sourcing efficiency initiatives."
+        tags: [Spend Analytics & Cost Optimization, Strategic Sourcing & Procurement]
+      - text: "Achieved Rs.8.8M annual savings through a plant-wide time-and-motion study, converting findings into FTE optimisation and line-balancing actions."
+        tags: [Spend Analytics & Cost Optimization, Continuous Improvement & Lean Six Sigma]
+      - text: "Generated Rs.7.2M (Rs.35.5 lakh+ p.a. run-rate) incremental revenue through targeted process optimisation projects aligned to cross-functional business priorities."
+        tags: [Process Excellence & Operating Model, Continuous Improvement & Lean Six Sigma]
+      - text: "Designed plant-level procurement KPIs (Cost per MT, Labour Productivity, Maintenance Spend %) aligned with finance and procurement governance."
+        tags: [Strategic Sourcing & Procurement, Business / Strategy & Operations Analytics]
+      - text: "Deployed Lean and 5S across the shop floor and instituted a cross-functional Kaizen policy spanning 8+ departments, improving OEE, productivity and workplace discipline."
+        tags: [Continuous Improvement & Lean Six Sigma, Leadership & Stakeholder Communication]
+      - text: "Drove the Bunge Productivity System across nine pillars (Safety, Quality, CI, Asset Care, Sustainability), embedding best practice through standardised SOPs."
+        tags: [Continuous Improvement & Lean Six Sigma, Process Excellence & Operating Model, Supply Chain & Manufacturing Operations]
+      - text: "Built the asset-management framework for a greenfield plant: 293+ asset additions, preventive-maintenance task lists and manpower planning executed in SAP, raising equipment reliability."
+        tags: [SAP & Enterprise Systems, Supply Chain & Manufacturing Operations]
+      - text: "Collaborated with global teams (Bunge Barcelona, Spain) on KPI digitisation and an Industry 4.0 asset framework, enabling real-time visibility via SAP and Power BI."
+        tags: [Workflow Automation & Digital Transformation, Business / Strategy & Operations Analytics, Leadership & Stakeholder Communication]
+      - text: "Led structured root-cause analyses (5-Why, Fishbone) that removed production bottlenecks and cut recurring operational issues."
+        tags: [Process Excellence & Operating Model, Continuous Improvement & Lean Six Sigma]
+      - text: "Implemented the ISO 14001 Environmental Management System at the Kandla site, securing regulatory compliance and strengthening sustainability standards."
+        tags: [Compliance, Risk & Controls, Supply Chain & Manufacturing Operations]
+      - text: "Led cross-functional teams on downtime-reduction initiatives, delivering substantial availability gains."
+        tags: [Leadership & Stakeholder Communication, Continuous Improvement & Lean Six Sigma]
+      - text: "Awarded 'Best Stop Story' for high-impact safety and operational-excellence leadership recognised at organisation level."
+        tags: [Leadership & Stakeholder Communication, Compliance, Risk & Controls]
+
+  - company: Info Origin Inc
+    title: US Technical Recruiter (Internship)
+    location: Remote
+    start: 2023-02
+    end: 2023-05
+    dates: Feb 2023 - May 2023
+    bullets:
+      - text: "Sourced, screened and assessed US-based technical candidates using multi-channel recruitment tooling, building a pipeline of 248+ qualified profiles."
+        tags: [Program & Project Management, Business / Strategy & Operations Analytics]
+
+skills:
+  Procurement & Spend: [Strategic Sourcing, Direct & Indirect Spend Optimization, Spend Analytics,
+                        Cost Diagnostics, Supplier Performance Management, Procurement KPI Design,
+                        Contract & Negotiation Support, Category Management]
+  Process & Transformation: [Lean Six Sigma (Green Belt), Kaizen, 5S, DMAIC, OEE Improvement,
+                             Value Stream Mapping, Root Cause Analysis (5-Why, Fishbone),
+                             SOP Standardization, Target Operating Model, Change Management]
+  Analytics & Tech: [Power BI, Tableau, Advanced Excel, SQL (working), SAP (MM/PM, Asset Care,
+                     Maintenance Task Lists), CRM, Jira, Data Visualization, KPI Dashboarding]
+  Domain: [Wealth & Portfolio Analytics, AML/KYC Controls, ISO 14001 EMS, Industry 4.0,
+           AI/GenAI-led Transformation, Manufacturing & FMCG Operations]
+
+certifications:
+  - Lean Six Sigma Green Belt
+  - SAP Certified Associate
+  - NISM - Portfolio Management
+  - Power BI & Tableau - Visualization and Data Analytics
+  - Project Management - Scrum Master & Agile (Jira)
+  - AI / GenAI Business Strategy
+  - Data Science & Data Analytics (Foundation)
+  - Salesforce (Foundation)
+  - Train the Trainer Level 1 - Gakshu Consulting
+  - FOSTAC & Allergen Management - Food Safety, SGS India
+
+achievements:
+  - "First Runner-up, Accenture Strategy Challenge - designed a GenAI transformation strategy for global FMCG clients."
+  - "Senator, IIMU Student Affairs - strengthened alumni engagement and committee policy alignment."
+  - "Representative, A4 IIMU - selected from 225 applicants across 8 evaluation rounds; liaison to 2,200+ alumni."
+  - "Awarded 'Best Stop Story' at Bunge for safety and operational-excellence impact."
+  - "Top position, Quality & Food Safety Quiz Week (World Food Safety Day), Bunge."
+
+preferences:
+  work_modes: [remote, hybrid]
+  locations: [India, Global Remote, Remote - India, Bangalore, Mumbai, Pune, Delhi NCR,
+              Gurgaon, Hyderabad, Chennai, Udaipur, Nagpur]
+  exclude_keywords: [unpaid, commission only, door to door, field sales, insurance agent,
+                     us citizens only, security clearance, must be located in]

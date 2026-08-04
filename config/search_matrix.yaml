@@ -1,0 +1,167 @@
+# =============================================================================
+# DAILY SEARCH QUERY MATRIX
+# The pipeline expands: target_roles x modifiers  -> per-source query strings.
+# =============================================================================
+
+target_roles:
+  - Operations Transformation Manager
+  - Continuous Improvement Lead
+  - Continuous Improvement Manager
+  - Strategic Sourcing Manager
+  - Procurement Manager
+  - Category Manager Procurement
+  - Process Excellence Lead
+  - Business Operations Analyst
+  - Business Operations Manager
+  - Strategy and Operations Manager
+  - Operational Excellence Manager
+  - Business Process Analyst
+  - Supply Chain Transformation Consultant
+  - Lean Six Sigma Consultant
+  - Spend Analytics Manager
+  - Program Manager Operations
+  - Management Consultant Operations
+  - Sourcing Analyst
+  - Procurement Excellence Analyst
+  - Transformation Consultant
+
+# Short, high-signal keyword seeds for API-based boards (they do poor phrase matching)
+keyword_seeds:
+  - procurement
+  - sourcing
+  - continuous improvement
+  - process excellence
+  - operational excellence
+  - business operations
+  - strategy and operations
+  - operations manager
+  - lean six sigma
+  - supply chain
+  - spend analytics
+  - transformation
+  - business analyst operations
+  - category manager
+
+work_modes: [remote, hybrid]
+
+locations:
+  - India
+  - Remote
+  - Worldwide
+  - Bangalore, India
+  - Mumbai, India
+  - Pune, India
+  - Gurgaon, India
+  - Hyderabad, India
+
+# JobSpy (LinkedIn / Indeed / Glassdoor / ZipRecruiter / Naukri / Google)
+#
+# Verified from this network:
+#   linkedin, indeed  -> working
+#   zip_recruiter     -> HTTP 403 (Cloudflare blocks datacentre IPs)
+#   naukri            -> HTTP 406 "recaptcha required"
+#   glassdoor, google -> return 0 results (anti-bot)
+# Add residential proxies below to unlock the blocked sites, then move them into
+# `sites`. Leaving a blocked site in `sites` only wastes time — it never returns rows.
+jobspy:
+  enabled: true
+  sites: [linkedin, indeed]
+  blocked_without_proxy: [zip_recruiter, naukri, glassdoor, google]
+  proxies: []          # e.g. ["user:pass@host:port", ...]
+  results_wanted: 25
+  hours_old: 72
+  country_indeed: India
+  is_remote: true
+  locations: ["India", "Remote, India"]
+
+# Y Combinator / Work at a Startup — well-paid, often-remote startup roles with far
+# less competition than the mainstream aggregators. No credentials required.
+ycombinator:
+  enabled: true
+  roles: [operations, finance, product]
+
+# -----------------------------------------------------------------------------
+# HIDDEN / UNINDEXED SOURCES — company-owned ATS portals.
+# These postings frequently never reach LinkedIn or Indeed.
+# -----------------------------------------------------------------------------
+ats:
+  # All tokens below were probed live and confirmed to return jobs.
+  greenhouse:   # boards-api.greenhouse.io/v1/boards/<token>/jobs?content=true
+    - stripe
+    - databricks
+    - airtable
+    - gitlab
+    - flexport
+    - instacart
+    - samsara
+    - sigmacomputing
+    - cockroachlabs
+    - grafanalabs
+    - zscaler
+    - twilio
+    - mongodb
+    - checkr
+    # remote-first companies
+    - canonical
+    - elastic
+    - remote          # remote.com
+    - postman
+    - mozilla
+    - dropbox
+    - turing
+    - customerio
+    - wikimedia
+    - bitwarden
+    - builtin
+  lever:        # api.lever.co/v0/postings/<company>?mode=json
+    - spotify
+    - mistplay
+    - toptal
+    - angellist       # Wellfound
+  ashby:        # api.ashbyhq.com/posting-api/job-board/<company>
+    - openai
+    - ramp
+    - linear
+    - notion
+    - vanta
+    # remote-first companies
+    - supabase
+    - camunda
+    - redis
+    - revenuecat
+    - andela
+    - zapier
+    - posthog
+    - helpscout
+    - close
+    - atlan
+    - kit             # ConvertKit
+    - buffer
+  smartrecruiters:  # api.smartrecruiters.com/v1/companies/<token>/postings
+    - freshworks
+    - whatfix
+  workable:     # apply.workable.com/api/v1/widget/accounts/<token>
+    - trailofbits
+  recruitee:    # <token>.recruitee.com/api/offers/
+    - mailerlite
+  workday:      # {host}/wday/cxs/{tenant}/{site}/jobs
+    - name: Accenture
+      host: https://accenture.wd103.myworkdayjobs.com
+      tenant: accenture
+      site: AccentureCareers
+    - name: Deloitte India
+      host: https://deloitteus.wd1.myworkdayjobs.com
+      tenant: deloitteus
+      site: Deloitte_US_External_Careers
+    - name: Salesforce
+      host: https://salesforce.wd12.myworkdayjobs.com
+      tenant: salesforce
+      site: External_Career_Site
+    - name: Nvidia
+      host: https://nvidia.wd5.myworkdayjobs.com
+      tenant: nvidia
+      site: NVIDIAExternalCareerSite
+    - name: Dell
+      host: https://dell.wd1.myworkdayjobs.com
+      tenant: dell
+      site: External

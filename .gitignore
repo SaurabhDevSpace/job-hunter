@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+*.zip
+env-backup*
+data/
+*.sqlite3
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.idea/
+.DS_Store
+*.egg-info/

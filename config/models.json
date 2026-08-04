@@ -1,0 +1,115 @@
+{
+  "_comment": [
+    "MODEL ROUTING POLICY \u2014 no model IDs are hardcoded in the routing path.",
+    "At runtime jobhunter.llm.catalog queries OpenRouter for the models that are",
+    "CURRENTLY free (price 0 in + 0 out), keeps only real text->text chat models, and",
+    "ranks them per task using capability heuristics (family prior, parameter count,",
+    "context window, JSON/structured-output support, reasoning support, output length,",
+    "advertised rate limits). Use `pinned_models` only if you want to force a specific",
+    "model to the front of a chain."
+  ],
+  "openrouter_api_key": "env:OPENROUTER_API_KEY",
+  "base_url": "https://openrouter.ai/api/v1",
+  "site_url": "env:SITE_URL",
+  "site_name": "DeepJobSearchPortal",
+  "discovery": {
+    "catalog_ttl_hours": 12,
+    "chain_length": 5,
+    "min_context_length": 16000,
+    "require_json_mode_for_parse": true,
+    "pinned_models": {
+      "parse": [],
+      "match": [],
+      "resume": []
+    },
+    "blocklist": []
+  },
+  "task_params": {
+    "parse": {
+      "max_tokens": 1400,
+      "temperature": 0.1
+    },
+    "match": {
+      "max_tokens": 2400,
+      "temperature": 0.2
+    },
+    "resume": {
+      "max_tokens": 3600,
+      "temperature": 0.3
+    }
+  },
+  "reasoning": {
+    "_comment": [
+      "Free reasoning models will spend an entire completion budget on internal",
+      "monologue and never reach the JSON. `effort` caps the thinking, `exclude` keeps",
+      "it out of the response body, and token_multiplier gives reasoning models extra",
+      "headroom so thinking can never starve the answer. Set a task to false to turn",
+      "reasoning off completely for models that allow it."
+    ],
+    "token_multiplier": 3.0,
+    "default": {
+      "effort": "low",
+      "exclude": true
+    },
+    "parse": {
+      "effort": "low",
+      "exclude": true
+    },
+    "match": {
+      "effort": "medium",
+      "exclude": true
+    },
+    "resume": {
+      "effort": "medium",
+      "exclude": true
+    }
+  },
+  "budget": {
+    "_comment": [
+      "Free OpenRouter keys are capped at ~50 free-model requests/day and ~20/minute.",
+      "Real limits are auto-detected via GET /api/v1/key and multiplied by safety_margin.",
+      "reserve_per_task holds calls back so resume generation is never starved by parsing."
+    ],
+    "free_tier_daily_requests": 50,
+    "paid_tier_daily_requests": 1000,
+    "safety_margin": 0.9,
+    "max_calls_per_day": 45,
+    "max_calls_per_run": 40,
+    "max_calls_per_minute": 18,
+    "reserve_per_task": {
+      "resume": 8,
+      "match": 6
+    },
+    "stage_share": {
+      "parse": 0.45,
+      "match": 0.35,
+      "resume": 0.5
+    },
+    "cache_enabled": true,
+    "cache_ttl_hours": 336,
+    "batch_match_size": 4,
+    "batch_enabled": true
+  },
+  "retry": {
+    "max_attempts_per_model": 2,
+    "backoff_seconds": 4,
+    "backoff_multiplier": 2.0,
+    "timeout_seconds": 180,
+    "retry_status_codes": [
+      408,
+      409,
+      429,
+      500,
+      502,
+      503,
+      504,
+      520,
+      524
+    ],
+    "json_failover_models": 2
+  },
+  "rate_limit": {
+    "min_interval_seconds": 3.0,
+    "cooldown_seconds_on_429": 65
+  }
+}
