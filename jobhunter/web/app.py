@@ -127,10 +127,28 @@ def job_detail(request: Request, job_id: str):
 
 
 # --------------------------------------------------------------- REST API
+def _nvidia_state() -> dict[str, Any]:
+    try:
+        from ..llm.nvidia import NvidiaClient
+        return NvidiaClient().state()
+    except Exception:
+        return {"configured": False, "usable": False}
+
+
+def _cline_state() -> dict[str, Any]:
+    try:
+        from ..llm.cline import ClineClient
+        return ClineClient().state()
+    except Exception:
+        return {"configured": False, "usable": False}
+
+
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     cfg = load_model_config()
     return {"status": "ok", "llm_configured": bool(cfg.api_key),
+            "nvidia_configured": _nvidia_state().get("configured", False),
+            "cline_configured": _cline_state().get("configured", False),
             "running": is_running(), "sources": list(REGISTRY)}
 
 
@@ -252,6 +270,9 @@ def api_config() -> dict[str, Any]:
     matrix = load_search_matrix()
     return {
         "llm_configured": bool(cfg.api_key),
+        "provider_order": ["nvidia", "openrouter", "cline"],
+        "nvidia": _nvidia_state(),
+        "cline": _cline_state(),
         "site_name": cfg.site_name,
         "chains": {t: cfg.chain_for(t) for t in ("parse", "match", "resume")},
         "target_roles": matrix.get("target_roles", []),
@@ -264,8 +285,14 @@ def api_config() -> dict[str, Any]:
 @app.get("/api/llm/test")
 def api_llm_test() -> JSONResponse:
     client = OpenRouterClient(load_model_config())
-    if not client.enabled:
-        return JSONResponse({"ok": False, "error": "OPENROUTER_API_KEY not set"}, status_code=400)
+    # NVIDIA/Cline can serve this call even when OpenRouter itself isn't configured —
+    # chat() tries NVIDIA first and falls back to Cline, so only bail out early if
+    # none of the three providers are usable.
+    if not client.enabled and not _nvidia_state().get("usable") and not _cline_state().get("usable"):
+        return JSONResponse(
+            {"ok": False, "error": "No LLM provider configured (OPENROUTER_API_KEY, "
+                                    "NVIDIA_API_KEY, CLINE_API_KEY all unset)."},
+            status_code=400)
     try:
         r = client.chat("parse", [{"role": "user", "content": "Reply with exactly: OK"}], max_tokens=12)
         return JSONResponse({"ok": True, "model": r.model, "response": r.text.strip()[:80]})

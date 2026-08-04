@@ -108,7 +108,28 @@ later by the resume generator so no extra API call is ever needed.
 
 ---
 
-## 3 · OpenRouter orchestration — nothing hardcoded
+## 3 · LLM provider chain: NVIDIA → OpenRouter → Cline
+
+Every LLM call goes through `OpenRouterClient.chat()`, which tries providers in this
+order so a capacity/rate limit on one never stalls a run:
+
+1. **NVIDIA** (`NVIDIA_API_KEY`) — tried first. NVIDIA's hosted NIM catalog isn't
+   rate-capped the way OpenRouter's free tier is, so a successful NVIDIA response
+   short-circuits the whole OpenRouter path. If NVIDIA times out or errors, the
+   client falls through automatically.
+2. **OpenRouter** (`OPENROUTER_API_KEY`) — the discovery-driven, budget-aware router
+   described below.
+3. **Cline** (`CLINE_API_KEY`) — last-resort overflow. Triggered whenever OpenRouter's
+   daily/run budget is exhausted or every model in its chain is rate-limited (429).
+
+Each provider is a small, independent client (`jobhunter/llm/nvidia.py`,
+`jobhunter/llm/cline.py`) with its own SQLite usage ledger and daily cap, so a
+broken or exhausted provider can never block the others. Model lists and caps are
+configured via env vars (`NVIDIA_MODELS`/`NVIDIA_DAILY_CAP`,
+`CLINE_MODELS`/`CLINE_DAILY_CAP`) — leave blank to use the verified-working
+defaults baked into each module.
+
+### OpenRouter orchestration — nothing hardcoded
 
 Model IDs are **discovered at runtime**, never pinned in code:
 

@@ -3,13 +3,18 @@
 Request lifecycle
 -----------------
 1. Cache lookup (content-addressed on task + messages + params). A hit costs 0 requests.
-2. Budget check: daily ledger, per-run cap, per-task reservations, client-side RPM guard.
-3. The model chain is resolved *at call time* from the live free-model catalog, ranked
+2. NVIDIA is tried first (see `nvidia.py`) — not rate-capped the way OpenRouter's free
+   tier is, so a successful NVIDIA call short-circuits the whole OpenRouter path.
+3. Budget check: daily ledger, per-run cap, per-task reservations, client-side RPM guard.
+   If OpenRouter's budget/capacity is exhausted, Cline (see `cline.py`) is tried next.
+4. The model chain is resolved *at call time* from the live free-model catalog, ranked
    for the task. Models in 429 cooldown are pushed to the back rather than dropped.
-4. Per-model retries with exponential backoff on retryable statuses; on a hard failure
+5. Per-model retries with exponential backoff on retryable statuses; on a hard failure
    the next model in the chain is tried. `response_format` is only sent to models whose
    advertised capabilities include it, and is dropped automatically on a 400/404/422.
-5. Successful completions are written back to the cache.
+6. Successful completions are written back to the cache.
+
+Provider order: NVIDIA -> OpenRouter -> Cline.
 """
 from __future__ import annotations
 
@@ -63,6 +68,7 @@ class OpenRouterClient:
         self._bad_json: set[str] = set()       # models that emit prose instead of JSON
         self._call_logger = logger
         db = str(db_path or DB_PATH)
+        self.db_path = db
         policy = self.cfg.budget
         self.budget = BudgetGuard(db, policy, api_key=self.cfg.api_key)
         self.cache = ResponseCache(db, ttl_hours=float(policy.get("cache_ttl_hours", 336)),
@@ -143,9 +149,6 @@ class OpenRouterClient:
     def chat(self, task: str, messages: list[dict[str, str]], *,
              response_format_json: bool = False, allow_cache: bool = True,
              exclude_models: set[str] | None = None, **overrides: Any) -> LLMResult:
-        if not self.enabled:
-            raise LLMError("OPENROUTER_API_KEY is not set — add it to .env to enable LLM features.")
-
         params = {**self.cfg.params_for(task), **overrides}
 
         # 1 --- cache -------------------------------------------------------
@@ -157,9 +160,26 @@ class OpenRouterClient:
                 log.info("[%s] cache hit (%s) — 0 API calls", task, model or "?")
                 return LLMResult(text=text, model=model or "cache", cached=True)
 
-        # 2 --- budget ------------------------------------------------------
+        # 2 --- NVIDIA (tried first) -----------------------------------------
+        # NVIDIA's hosted catalog isn't rate-capped the way OpenRouter's free
+        # tier is, so it is attempted before OpenRouter rather than only as a
+        # rescue. Any failure here is swallowed and falls through to the
+        # normal OpenRouter -> Cline chain below.
+        nv = self._try_nvidia(task, messages, params, response_format_json,
+                              cache_key if allow_cache else "")
+        if nv is not None:
+            return nv
+
+        if not self.enabled:
+            raise LLMError("OPENROUTER_API_KEY is not set — add it to .env to enable LLM features.")
+
+        # 3 --- budget ------------------------------------------------------
         allowed, reason = self.budget.can_spend(task)
         if not allowed:
+            fb = self._try_cline(task, messages, params, response_format_json,
+                                 cache_key if allow_cache else "", reason)
+            if fb is not None:
+                return fb
             raise LLMBudgetError(reason)
 
         retry = self.cfg.retry
@@ -192,6 +212,10 @@ class OpenRouterClient:
                 attempt += 1
                 ok_budget, reason = self.budget.can_spend(task)
                 if not ok_budget:
+                    fb = self._try_cline(task, messages, params, response_format_json,
+                                         cache_key if allow_cache else "", reason)
+                    if fb is not None:
+                        return fb
                     raise LLMBudgetError(reason)
 
                 payload: dict[str, Any] = {
@@ -253,8 +277,91 @@ class OpenRouterClient:
                     time.sleep(backoff)
                     backoff *= float(retry.get("backoff_multiplier", 2.0))
 
+        # Every model failed. If that was purely rate limiting, OpenRouter is out
+        # of capacity rather than broken — exactly the case Cline exists to cover.
+        errs = [str(a.get("error", "")) for a in attempts if a.get("error")]
+        if errs and all("429" in e for e in errs):
+            fb = self._try_cline(task, messages, params, response_format_json,
+                                 cache_key if allow_cache else "",
+                                 "every OpenRouter model is rate-limited")
+            if fb is not None:
+                return fb
+
         raise LLMError(f"All {len(chain)} free models exhausted for task '{task}'. "
                        f"Last attempts: {attempts[-3:]}")
+
+    def _try_cline(self, task: str, messages: list[dict[str, str]],
+                   params: dict[str, Any], response_format_json: bool,
+                   cache_key: str, reason: str) -> LLMResult | None:
+        """Best-effort overflow to Cline's free models. Returns None if the
+        fallback isn't usable, so callers keep their original error path."""
+        try:
+            from .cline import ClineClient, ClineUnavailable
+        except Exception:  # pragma: no cover - defensive import guard
+            return None
+
+        try:
+            client = ClineClient(db_path_override=self.db_path, logger=self._call_logger)
+            if not client.available():
+                return None
+            log.warning("[%s] OpenRouter unavailable (%s) — falling back to Cline", task, reason)
+            text, model, usage = client.chat(
+                task, messages,
+                response_format_json=response_format_json,
+                max_tokens=params.get("max_tokens"),
+                temperature=params.get("temperature"),
+                timeout=int(self.cfg.retry.get("timeout_seconds", 180)),
+                max_attempts_per_model=int(self.cfg.retry.get("max_attempts_per_model", 2)),
+            )
+        except ClineUnavailable as exc:
+            log.warning("[%s] Cline fallback unavailable: %s", task, exc)
+            return None
+        except Exception:
+            log.warning("[%s] Cline fallback errored", task, exc_info=True)
+            return None
+
+        tagged = f"cline:{model}"
+        if cache_key:
+            self.cache.put(cache_key, task, tagged, text)
+        return LLMResult(text=text, model=tagged, usage=usage,
+                         attempts=[{"model": tagged, "ok": True, "provider": "cline"}])
+
+    def _try_nvidia(self, task: str, messages: list[dict[str, str]],
+                    params: dict[str, Any], response_format_json: bool,
+                    cache_key: str) -> LLMResult | None:
+        """Best-effort primary attempt via NVIDIA. Returns None if the
+        provider isn't usable/fails, so the caller falls through to the
+        normal OpenRouter -> Cline chain unaffected."""
+        try:
+            from .nvidia import NvidiaClient, NvidiaUnavailable
+        except Exception:  # pragma: no cover - defensive import guard
+            return None
+
+        try:
+            client = NvidiaClient(db_path_override=self.db_path, logger=self._call_logger)
+            if not client.available():
+                return None
+            text, model, usage = client.chat(
+                task, messages,
+                response_format_json=response_format_json,
+                max_tokens=params.get("max_tokens"),
+                temperature=params.get("temperature"),
+                timeout=int(self.cfg.retry.get("timeout_seconds", 180)),
+                max_attempts_per_model=int(self.cfg.retry.get("max_attempts_per_model", 2)),
+            )
+        except NvidiaUnavailable as exc:
+            log.info("[%s] NVIDIA unavailable: %s", task, exc)
+            return None
+        except Exception:
+            log.warning("[%s] NVIDIA attempt errored", task, exc_info=True)
+            return None
+
+        tagged = f"nvidia:{model}"
+        if cache_key:
+            self.cache.put(cache_key, task, tagged, text)
+        log.info("[%s] served by NVIDIA (%s) — OpenRouter not touched", task, model)
+        return LLMResult(text=text, model=tagged, usage=usage,
+                         attempts=[{"model": tagged, "ok": True, "provider": "nvidia"}])
 
     def json_call(self, task: str, system: str, user: str, *,
                   schema_hint: str = "", repair: bool = True, **overrides: Any) -> tuple[Any, str]:
