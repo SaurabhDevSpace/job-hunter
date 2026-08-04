@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -104,7 +105,12 @@ class Profile:
 
     @property
     def years_experience(self) -> int:
-        return int(self.raw.get("years_experience", 0))
+        raw = self.raw.get("years_experience", 0)
+        if isinstance(raw, (int, float)):
+            return int(raw)
+        # Tolerate human-written values like "4+", "4 years", "~5".
+        m = re.search(r"\d+(?:\.\d+)?", str(raw))
+        return int(float(m.group())) if m else 0
 
     def all_bullets(self) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
