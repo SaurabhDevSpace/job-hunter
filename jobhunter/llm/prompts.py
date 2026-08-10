@@ -157,7 +157,7 @@ ABSOLUTE RULES
 Output JSON only."""
 
 RESUME_SCHEMA = """{
-  "target_title": "string  // headline title mirroring the JD title, truthful for the candidate",
+  "target_title": "string  // credible candidate headline: similar to the target role but not a copy of the JD title; grounded in the candidate's existing profession",
   "professional_summary": "string  // 3 sentences, no pronouns, JD-mirrored keywords",
   "core_competencies": ["string  // 9-12 short keyword phrases, ATS-mirrored"],
   "experience": [
@@ -199,7 +199,10 @@ POSITIONING ANGLE: {angle}
 Raw job description (truncated):
 {description}
 
-Produce the tailored, ATS-optimised resume JSON now."""
+Produce the tailored, ATS-optimised resume JSON now. The target_title must NOT be identical
+to the target job title. Create a closely related, truthful headline using the candidate's
+original professional identity and transferable strengths; never claim the candidate held
+the target employer's exact role title."""
 
 
 # ------------------------------------------------------------- COVER LETTER

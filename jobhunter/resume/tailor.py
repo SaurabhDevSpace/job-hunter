@@ -81,7 +81,7 @@ def build_resume_payload(job: Job, profile: Profile, score: Any,
             data, model = client.json_call("resume", P.RESUME_SYSTEM, user,
                                           schema_hint=P.RESUME_SCHEMA)
             if isinstance(data, dict):
-                resume = _from_llm(data, profile, model)
+                resume = _from_llm(data, profile, model, job_title=job.title)
                 if resume:
                     return resume
         except LLMError as exc:
@@ -90,7 +90,8 @@ def build_resume_payload(job: Job, profile: Profile, score: Any,
     return deterministic_tailor(job, profile, ats_keywords)
 
 
-def _from_llm(data: dict[str, Any], profile: Profile, model: str) -> TailoredResume | None:
+def _from_llm(data: dict[str, Any], profile: Profile, model: str,
+              *, job_title: str | None = None) -> TailoredResume | None:
     """Validate LLM output against ground truth; repair rather than reject where possible."""
     truth = {(_key(r["company"]), _key(r["title"])): r for r in profile.experience}
     truth_by_company = {_key(r["company"]): r for r in profile.experience}
@@ -150,7 +151,7 @@ def _from_llm(data: dict[str, Any], profile: Profile, model: str) -> TailoredRes
                or [re.sub(r"\s+", " ", profile.summary).strip()])[0]
 
     return TailoredResume(
-        target_title=str(data.get("target_title") or profile.headline).strip(),
+        target_title=_safe_target_title(data.get("target_title"), profile, job_title),
         professional_summary=summary,
         core_competencies=_strlist(data.get("core_competencies"))[:12] or _default_competencies(profile),
         experience=experience,
@@ -220,7 +221,7 @@ def deterministic_tailor(job: Job, profile: Profile, ats_keywords: list[str]) ->
     ats_pct = round(100 * len(included) / max(1, len(ats_keywords[:20])), 1)
 
     return TailoredResume(
-        target_title=job.title or profile.headline,
+        target_title=_safe_target_title(None, profile, job_title=job.title),
         professional_summary=summary,
         core_competencies=comps,
         experience=experience,
@@ -239,6 +240,27 @@ def deterministic_tailor(job: Job, profile: Profile, ats_keywords: list[str]) ->
         ],
         generated_by="deterministic",
     )
+
+
+def _safe_target_title(raw_title: Any, profile: Profile, *, job_title: str | None = None) -> str:
+    """Keep the headline truthful and adjacent to the target role, never identical to the JD title."""
+    candidate = _clean_bullet(raw_title or "").strip()
+    if candidate:
+        cand_key = re.sub(r"\s+", " ", candidate).lower()
+        job_key = re.sub(r"\s+", " ", str(job_title or "")).lower()
+        if cand_key and job_key and cand_key == job_key:
+            candidate = ""
+    if candidate:
+        return candidate
+
+    for fallback in (
+        _clean_bullet(profile.headline or "").strip(),
+        _clean_bullet(getattr(profile, "current_title", "") or "").strip(),
+    ):
+        if fallback:
+            return fallback
+
+    return "Operations Transformation Professional"
 
 
 def _default_competencies(profile: Profile) -> list[str]:

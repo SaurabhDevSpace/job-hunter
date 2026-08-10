@@ -184,7 +184,8 @@ class NvidiaClient:
         # headroom for an actual answer to follow the reasoning.
         effective_max_tokens = max(int(max_tokens or 0), 512)
 
-        for model in self.model_list:
+        models = _prioritize_models(self.model_list, task)
+        for model in models:
             for attempt in range(1, max(1, max_attempts_per_model) + 1):
                 # Re-check inside the loop: a long run must not blow past the
                 # cap just because it was under it when the call started.
@@ -245,6 +246,15 @@ class NvidiaClient:
                 self._call_logger(task, f"nvidia:{model}", ok, latency_ms, error)
             except Exception:
                 log.debug("nvidia call logging failed", exc_info=True)
+
+
+def _prioritize_models(models: list[str], task: str) -> list[str]:
+    """Prefer the strongest models for one-time profile/strategy decisions."""
+    if task not in {"profile", "strategy"}:
+        return list(models)
+    preferred = ("nemotron-3-ultra-550b", "nemotron-3-super-120b", "deepseek-v4")
+    return sorted(models, key=lambda model: next(
+        (i for i, marker in enumerate(preferred) if marker in model), len(preferred)))
 
 
 def _extract_text(body: dict[str, Any]) -> str:
