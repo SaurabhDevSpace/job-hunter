@@ -188,6 +188,11 @@ def api_last_run() -> dict[str, Any]:
     return last_report() or {"message": "no run recorded yet"}
 
 
+@app.get("/api/run/status")
+def api_run_status() -> dict[str, Any]:
+    return {"running": is_running(), "last_report": last_report()}
+
+
 @app.get("/api/runs")
 def api_runs(limit: int = 20) -> list[dict[str, Any]]:
     return store().runs(limit)

@@ -1,5 +1,52 @@
 {% extends "base.html" %}
 {% block content %}
+<script>
+let __deepSearchPolling = false;
+
+async function runDeepSearch(){
+  const btn = document.getElementById('deepSearchBtn');
+  if(btn) btn.disabled = true;
+  try{
+    const r = await fetch('/api/run?deep=12&resumes=5&min_score=60', {method:'POST'});
+    const j = await r.json();
+    if(!r.ok || !j.started){
+      if(btn) btn.disabled = false;
+      toast('<b>⚠️ ' + esc(j.reason || 'Could not start deep search') + '</b>', 8000);
+      return;
+    }
+    location.reload();
+  }catch(e){
+    if(btn) btn.disabled = false;
+    toast('⚠️ ' + esc(e), 8000);
+  }
+}
+
+function pollDeepSearch(){
+  if(__deepSearchPolling) return;
+  __deepSearchPolling = true;
+  const tick = async ()=>{
+    try{
+      const r = await fetch('/api/run/status');
+      const j = await r.json();
+      if(!j.running){
+        __deepSearchPolling = false;
+        location.reload();
+        return;
+      }
+    }catch(e){ /* transient; keep polling */ }
+    setTimeout(tick, 3000);
+  };
+  setTimeout(tick, 3000);
+}
+
+{% if running %}
+document.addEventListener('DOMContentLoaded', ()=>{
+  const btn = document.getElementById('deepSearchBtn');
+  if(btn) btn.disabled = true;
+  pollDeepSearch();
+});
+{% endif %}
+</script>
 
 {% macro tier_badge(t) -%}
   <span class="badge t-{{ 'Aplus' if t == 'A+' else (t or 'C') }}">{{ t or '—' }}</span>
@@ -24,7 +71,7 @@
       OpenRouter {{ 'connected' if llm_ready else 'no API key — deterministic mode' }}</span>
     <span class="pill {{ 'on' if running else 'off' }}">
       {{ 'run in progress' if running else 'idle' }}</span>
-    <button onclick="post('/api/run?deep=12&resumes=5&min_score=60','Deep search + resume generation')">
+    <button id="deepSearchBtn" onclick="runDeepSearch()">
       ▶ Run deep search now</button>
     <button class="ghost" onclick="post('/api/run?deep=0&resumes=3&use_llm=false','Offline harvest')">
       Harvest only (no LLM)</button>
