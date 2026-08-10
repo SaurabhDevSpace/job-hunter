@@ -37,6 +37,15 @@ def _format_generated_at(dt: datetime | None = None) -> str:
     return value.isoformat(timespec="seconds")
 
 
+def _format_generated_at_display(dt: datetime | None = None) -> str:
+    tz = _local_tz()
+    value = dt or datetime.now(tz=tz)
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=ZoneInfo("UTC"))
+    value = value.astimezone(tz)
+    return value.strftime("%Y-%m-%d %I:%M:%S %p %Z")
+
+
 def daily_job(**kwargs: Any) -> RunReport | None:
     """Run the pipeline once. Guarded so overlapping triggers cannot double-run."""
     if not _lock.acquire(blocking=False):
@@ -51,8 +60,10 @@ def daily_job(**kwargs: Any) -> RunReport | None:
         }
         report = Pipeline().run_daily(**opts)
         DATA_DIR.mkdir(parents=True, exist_ok=True)
+        stamped = datetime.now(tz=_local_tz())
         LAST_REPORT_PATH.write_text(
-            json.dumps({"generated_at": _format_generated_at(),
+            json.dumps({"generated_at": _format_generated_at(stamped),
+                        "generated_at_display": _format_generated_at_display(stamped),
                         **report.to_dict()}, indent=2, default=str), encoding="utf-8")
         return report
     finally:
@@ -76,7 +87,10 @@ def last_report() -> dict[str, Any] | None:
             except ValueError:
                 dt = None
             if dt is not None:
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=ZoneInfo("UTC"))
                 data["generated_at"] = _format_generated_at(dt)
+                data["generated_at_display"] = _format_generated_at_display(dt)
         return data
     return None
 

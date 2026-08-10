@@ -132,7 +132,7 @@
       <h2>Last run</h2>
       {% if last_report %}
         <div class="small">
-          <div><b>{{ last_report.generated_at }}</b></div>
+          <div><b>{{ last_report.generated_at_display or last_report.generated_at }}</b></div>
           <div class="muted">found {{ last_report.jobs_found }} → {{ last_report.jobs_after_dedupe }} unique
             ({{ last_report.jobs_new }} new) · scored {{ last_report.jobs_scored }}
             · {{ last_report.resumes_built }} resumes
