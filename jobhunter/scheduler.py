@@ -8,6 +8,7 @@ import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from .config import DATA_DIR
 from .pipeline import Pipeline, RunReport
@@ -16,6 +17,24 @@ log = logging.getLogger("jobhunter.scheduler")
 
 _lock = threading.Lock()
 LAST_REPORT_PATH = DATA_DIR / "last_run.json"
+
+
+def _local_tz() -> ZoneInfo:
+    name = os.getenv("JOBHUNTER_TZ", "Asia/Kolkata")
+    try:
+        return ZoneInfo(name)
+    except Exception:
+        return ZoneInfo("Asia/Kolkata")
+
+
+def _format_generated_at(dt: datetime | None = None) -> str:
+    tz = _local_tz()
+    value = dt or datetime.now(tz=tz)
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=tz)
+    else:
+        value = value.astimezone(tz)
+    return value.isoformat(timespec="seconds")
 
 
 def daily_job(**kwargs: Any) -> RunReport | None:
@@ -33,7 +52,7 @@ def daily_job(**kwargs: Any) -> RunReport | None:
         report = Pipeline().run_daily(**opts)
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         LAST_REPORT_PATH.write_text(
-            json.dumps({"generated_at": datetime.now().isoformat(timespec="seconds"),
+            json.dumps({"generated_at": _format_generated_at(),
                         **report.to_dict()}, indent=2, default=str), encoding="utf-8")
         return report
     finally:
@@ -47,9 +66,18 @@ def is_running() -> bool:
 def last_report() -> dict[str, Any] | None:
     if LAST_REPORT_PATH.exists():
         try:
-            return json.loads(LAST_REPORT_PATH.read_text(encoding="utf-8"))
+            data = json.loads(LAST_REPORT_PATH.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             return None
+        generated_at = data.get("generated_at")
+        if generated_at:
+            try:
+                dt = datetime.fromisoformat(str(generated_at))
+            except ValueError:
+                dt = None
+            if dt is not None:
+                data["generated_at"] = _format_generated_at(dt)
+        return data
     return None
 
 
