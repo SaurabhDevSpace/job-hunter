@@ -262,9 +262,9 @@ def _safe_target_title(profile: Profile, job: Job) -> str:
     matched = [item for item in matched if item[0] > 0]
     matched.sort(key=lambda item: (-item[0], -item[1], item[2]))
     if matched:
-        # Two targeted, evidence-backed capability families are clearer than a
-        # static catch-all headline or an unproven copy of the target title.
-        return " / ".join(item[2] for item in matched[:2]) + " Professional"
+        # Keep a single, strongest proven family so the headline is focused and
+        # never rendered as dual slash-separated titles.
+        return f"{matched[0][2]} Professional"
     return "Business Operations & Transformation Professional"
 
 
