@@ -264,8 +264,8 @@ def _safe_target_title(profile: Profile, job: Job) -> str:
     if matched:
         # Keep a single, strongest proven family so the headline is focused and
         # never rendered as dual slash-separated titles.
-        return f"{matched[0][2]} Professional"
-    return "Business Operations & Transformation Professional"
+        return matched[0][2]
+    return "Business Operations & Transformation"
 
 
 def _relevant_competencies(profile: Profile, job: Job) -> list[Any]:
@@ -294,15 +294,72 @@ def _rank_achievements(profile: Profile, job: Job) -> list[str]:
 
 
 def _transferable_summary(profile: Profile, job: Job, claimable: list[str], fallback: str) -> str:
-    """Lead with proven transferable capability, not the current employer's domain."""
+    """Build a focused, target-aligned summary from proven profile evidence."""
     capabilities = [c.name for c in _relevant_competencies(profile, job)[:3]]
     if not capabilities:
         return fallback
-    summary = (f"{_safe_target_title(profile, job)} with {profile.years_experience}+ years of experience "
-               f"delivering measurable outcomes through {', '.join(capabilities)}.")
-    if claimable:
-        summary += f" Brings demonstrated experience aligned to {', '.join(claimable[:4])}."
+
+    evidence = _summary_evidence(profile, job, capabilities)
+    capability_text = ", ".join(_summary_capability_label(c) for c in capabilities)
+    summary = (f"{_safe_target_title(profile, job)} professional with "
+               f"{profile.years_experience}+ years of experience across {capability_text}.")
+    if evidence:
+        summary += " " + " ".join(evidence)
+    else:
+        summary += " " + re.sub(r"\s+", " ", fallback).strip()
+
+    mba = next((e for e in profile.education if "mba" in str(e.get("degree", "")).lower()), None)
+    if mba:
+        summary += f" MBA, {mba.get('institution', '')}."
     return summary
+
+
+def _summary_capability_label(capability: str) -> str:
+    labels = {
+        "Business / Strategy & Operations Analytics": "business and operations analytics",
+        "Process Excellence & Operating Model": "process excellence and operating-model improvement",
+        "Program & Project Management": "program and project delivery",
+        "Continuous Improvement & Lean Six Sigma": "continuous improvement and Lean Six Sigma",
+        "Spend Analytics & Cost Optimization": "spend analytics and cost optimization",
+        "Strategic Sourcing & Procurement": "strategic sourcing and procurement",
+        "Workflow Automation & Digital Transformation": "workflow automation and digital transformation",
+        "SAP & Enterprise Systems": "SAP and enterprise systems",
+        "Leadership & Stakeholder Communication": "cross-functional stakeholder management",
+    }
+    return labels.get(capability, capability)
+
+
+def _summary_evidence(profile: Profile, job: Job, capabilities: list[str]) -> list[str]:
+    """Select the strongest JD-relevant, source-verbatim achievements for the summary."""
+    target = f"{job.title} {job.department} {job.description}".lower()
+    selected: list[tuple[float, str]] = []
+    capability_set = set(capabilities)
+    for role in profile.experience:
+        # Internship evidence is retained in experience, but should not displace
+        # substantive career outcomes in the executive summary.
+        is_internship = "intern" in str(role.get("title", "")).lower()
+        for bullet in role.get("bullets", []):
+            text = str(bullet.get("text", "")).strip()
+            if not text:
+                continue
+            direct_overlap = 0
+            relevant_tags = 0
+            for tag in bullet.get("tags", []):
+                comp = next((c for c in profile.competencies if c.name == tag), None)
+                if comp:
+                    matches = sum(form in target for form in comp.surface_forms if len(form) > 3)
+                    direct_overlap += matches
+                    if tag in capability_set and matches:
+                        relevant_tags += 1
+            score = (direct_overlap * 5.0) + (relevant_tags * 3.0)
+            if re.search(r"[₹$]|\d+%|\b(?:\d{2,}|one|two|three|four|five|six|seven|eight|nine)\+?\b", text, re.I):
+                score += 2.0
+            if is_internship:
+                score -= 10.0
+            selected.append((score, text))
+
+    selected.sort(key=lambda item: (-item[0], -len(item[1]), item[1]))
+    return [text for score, text in selected if score > 0][:2]
 
 
 def _default_competencies(profile: Profile) -> list[str]:
