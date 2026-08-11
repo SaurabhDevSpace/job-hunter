@@ -93,6 +93,7 @@ async function tailorFromCustomJD(){
           if(btn) btn.disabled = false;
           const dl = downloadsHtml(j.result);
           toast(dl ? '<span class="close" onclick="hideToast()">✕</span><b>✅ Tailored resume ready</b>'+dl : '<b>✅ Done</b>', dl ? 0 : 7000);
+          setTimeout(()=>location.reload(), 1200);
           return;
         }
       }catch(e){ /* transient request failure; continue polling */ }

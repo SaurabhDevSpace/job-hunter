@@ -20,7 +20,7 @@ from fastapi.templating import Jinja2Templates
 from ..config import OUTPUT_DIR, load_model_config, load_profile, load_search_matrix
 from ..db import Store
 from ..llm import LLMError, OpenRouterClient
-from ..models import Job
+from ..models import CUSTOM_TAILOR_SOURCE, Job
 from ..pipeline import Pipeline
 from ..scoring import deterministic_score, llm_refine, parse_jd
 from ..scheduler import build_scheduler, daily_job, is_running, last_report
@@ -95,6 +95,10 @@ def _india_permissible_jobs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     from ..geo import eligible
     out: list[dict[str, Any]] = []
     for row in rows:
+        # Custom-tailor jobs are validated at ingestion; keep them visible in Matches.
+        if str(row.get("source", "")) == CUSTOM_TAILOR_SOURCE:
+            out.append(row)
+            continue
         verdict, _ = eligible(str(row.get("location", "") or ""),
                               str(row.get("description", "") or ""))
         if verdict == "eligible":

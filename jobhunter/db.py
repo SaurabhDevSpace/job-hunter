@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 from .config import DB_PATH, ensure_dirs
-from .models import Job, JobScore
+from .models import CUSTOM_TAILOR_SOURCE, Job, JobScore
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
@@ -244,7 +244,10 @@ class Store:
                "FROM jobs j LEFT JOIN scores s USING(job_id) WHERE 1=1"]
         args: list[Any] = []
         if min_score:
-            sql.append("AND COALESCE(s.match_score,0) >= ?"); args.append(min_score)
+            # Always include custom-tailor rows so manually added requirements stay visible
+            # even when score filters are active.
+            sql.append("AND (j.source = ? OR COALESCE(s.match_score,0) >= ?)")
+            args += [CUSTOM_TAILOR_SOURCE, min_score]
         if tier:
             sql.append("AND s.tier = ?"); args.append(tier)
         if work_mode:
