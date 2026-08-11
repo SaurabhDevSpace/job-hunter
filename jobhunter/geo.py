@@ -193,9 +193,11 @@ def eligible(location: str, description: str = "", home_country: str = "in") -> 
     if any(city in tokens for city in INDIA_CITIES):
         found.add("in")
 
-    # 5. Unrestricted keywords (Worldwide, Anywhere, Global)
-    # If ONLY these terms appear (no restricting regions/phrases), treat as eligible.
-    if any(ut in tokens for ut in UNRESTRICTED_TERMS):
+    # 5. Explicitly unrestricted *location* wording (Worldwide / Anywhere).
+    # Scope this to the location field only: generic JD prose like "global team"
+    # must not make an otherwise country-restricted role appear unrestricted.
+    location_lc = (location or "").lower()
+    if any(ut in location_lc for ut in UNRESTRICTED_TERMS):
         # Check for restricting phrases in the FULL text (location + desc)
         restricting_phrases = (
             "us only", "usa only", "u.s. only", "uk only", "eu only",
@@ -240,9 +242,9 @@ def eligible(location: str, description: str = "", home_country: str = "in") -> 
     # India plus others (e.g. "Worldwide" / "Anywhere in the World") -> eligible
     return "eligible", sorted(found)
 
-# "Worldwide" / "Anywhere" / "Global" are unrestricted unless combined with a
+# "Worldwide" / "Anywhere" are unrestricted unless combined with a
 # restricting clause ("Worldwide, but must be in US timezones" etc.). That
 # complexity is better handled by the text scan; here we just suppress the
 # macro-region expansion when these unrestricted keywords appear alone.
-UNRESTRICTED_TERMS = {"worldwide", "anywhere", "global", "anywhere in the world",
+UNRESTRICTED_TERMS = {"worldwide", "anywhere", "anywhere in the world",
                       "anywhere worldwide", "work from anywhere"}

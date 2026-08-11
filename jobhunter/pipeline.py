@@ -130,7 +130,7 @@ class Pipeline:
                 continue
             # India work-authorization gate
             verdict, _ = eligible(job.location, job.description)
-            if verdict == "ineligible":
+            if verdict != "eligible":
                 continue
             tl = job.title.lower()
             if any(f" {r} " in f" {tl} " or tl.startswith(r) for r in reject if len(r) > 3):

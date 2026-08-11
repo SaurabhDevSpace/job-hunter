@@ -81,6 +81,17 @@ def _downloads(files: dict[str, Any]) -> list[dict[str, str]]:
     return out
 
 
+def _india_permissible_jobs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    from ..geo import eligible
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        verdict, _ = eligible(str(row.get("location", "") or ""),
+                              str(row.get("description", "") or ""))
+        if verdict == "eligible":
+            out.append(row)
+    return out
+
+
 # ------------------------------------------------------------------- views
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request,
@@ -90,6 +101,7 @@ def dashboard(request: Request,
     st = store()
     jobs = st.list_jobs(min_score=min_score, tier=tier, work_mode=mode, source=source,
                         hidden_only=hidden, query=q, limit=limit)
+    jobs = _india_permissible_jobs(jobs)
     cfg = load_model_config()
     client = OpenRouterClient(cfg)
     stats = st.stats()
@@ -161,8 +173,9 @@ def api_stats() -> dict[str, Any]:
 def api_jobs(min_score: float = 0, tier: str | None = None, mode: str | None = None,
              source: str | None = None, hidden: bool = False, q: str | None = None,
              limit: int = 200) -> list[dict[str, Any]]:
-    return store().list_jobs(min_score=min_score, tier=tier, work_mode=mode, source=source,
+    rows = store().list_jobs(min_score=min_score, tier=tier, work_mode=mode, source=source,
                              hidden_only=hidden, query=q, limit=limit)
+    return _india_permissible_jobs(rows)
 
 
 @app.get("/api/jobs/{job_id}")
