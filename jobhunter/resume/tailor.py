@@ -238,19 +238,33 @@ def deterministic_tailor(job: Job, profile: Profile, ats_keywords: list[str]) ->
 
 
 def _safe_target_title(profile: Profile, job: Job) -> str:
-    """Return a broad, proven role-family headline instead of a JD title."""
-    names = [c.name for c in _relevant_competencies(profile, job)]
-    analytic = any("Analytics" in name for name in names)
-    process = any("Process" in name or "Continuous Improvement" in name for name in names)
-    transformation = any("Transformation" in name or "Automation" in name for name in names)
-    if analytic and process:
-        return "Business Operations, Process Excellence & Analytics Professional"
-    if analytic and transformation:
-        return "Business Analytics & Digital Transformation Professional"
-    if process and transformation:
-        return "Process Excellence & Transformation Professional"
-    if names:
-        return f"{names[0]} Professional"
+    """Choose a JD-aware, proven role family without copying the applied title."""
+    labels = {
+        "Strategic Sourcing & Procurement": "Strategic Sourcing & Procurement",
+        "Spend Analytics & Cost Optimization": "Spend Analytics & Cost Optimization",
+        "Continuous Improvement & Lean Six Sigma": "Continuous Improvement & Process Excellence",
+        "Process Excellence & Operating Model": "Process Excellence & Operating Model Transformation",
+        "Business / Strategy & Operations Analytics": "Business Operations & Analytics",
+        "Workflow Automation & Digital Transformation": "Digital Transformation & Workflow Automation",
+        "SAP & Enterprise Systems": "Enterprise Systems & Process Improvement",
+        "Program & Project Management": "Program Delivery & Operations",
+        "Wealth / Portfolio Management & Financial Services": "Portfolio Analytics & Client Operations",
+        "Compliance, Risk & Controls": "Risk, Controls & Operations",
+        "Supply Chain & Manufacturing Operations": "Supply Chain & Operations",
+        "Leadership & Stakeholder Communication": "Cross-Functional Operations & Stakeholder Management",
+    }
+    target = f"{job.title} {job.department} {job.description}".lower()
+    matched = [
+        (sum(form in target for form in competency.surface_forms if len(form) > 3),
+         competency.weight, labels.get(competency.name, competency.name))
+        for competency in profile.competencies
+    ]
+    matched = [item for item in matched if item[0] > 0]
+    matched.sort(key=lambda item: (-item[0], -item[1], item[2]))
+    if matched:
+        # Two targeted, evidence-backed capability families are clearer than a
+        # static catch-all headline or an unproven copy of the target title.
+        return " / ".join(item[2] for item in matched[:2]) + " Professional"
     return "Business Operations & Transformation Professional"
 
 

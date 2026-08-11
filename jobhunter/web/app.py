@@ -149,7 +149,7 @@ def _tailor_custom(payload: dict[str, Any]) -> dict[str, Any]:
 
     title = _guess_title(desc, fallback=title or fetched_title)
     url = job_url or "manual://pasted-jd"
-    job = Job(source="manual", title=title, company=company, url=url,
+    job = Job(source="My Own Search", title=title, company=company, url=url,
               location=location, description=desc).normalize()
 
     from ..geo import eligible
