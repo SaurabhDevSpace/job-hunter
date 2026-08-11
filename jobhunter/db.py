@@ -9,7 +9,9 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 from .config import DB_PATH, ensure_dirs
-from .models import CUSTOM_TAILOR_SOURCE, Job, JobScore
+from .models import Job, JobScore
+
+CUSTOM_TAILOR_SOURCE = "My Own Search"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
