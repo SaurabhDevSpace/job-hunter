@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
           </td>
           <td>{{ tier_badge(j.tier) }}</td>
           <td>
-            <a href="/job/{{ j.job_id }}">{{ j.title[:64] }}</a>
+            <a href="/job/{{ j.job_id }}" target="_blank" rel="noopener">{{ j.title[:64] }}</a>
             {% if j.is_hidden %}<span class="chip hidden-src">hidden</span>{% endif %}
             <div class="small muted">{{ (j.location or '')[:52] }}</div>
           </td>
