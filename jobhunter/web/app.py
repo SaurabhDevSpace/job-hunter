@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote
+from urllib.request import Request as UrlRequest, urlopen
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -15,7 +18,9 @@ from fastapi.templating import Jinja2Templates
 from ..config import OUTPUT_DIR, load_model_config, load_profile, load_search_matrix
 from ..db import Store
 from ..llm import LLMError, OpenRouterClient
+from ..models import Job
 from ..pipeline import Pipeline
+from ..scoring import deterministic_score, llm_refine, parse_jd
 from ..scheduler import build_scheduler, daily_job, is_running, last_report
 from ..sources import REGISTRY
 
@@ -90,6 +95,36 @@ def _india_permissible_jobs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if verdict == "eligible":
             out.append(row)
     return out
+
+
+def _clean_job_html(raw_html: str) -> tuple[str, str]:
+    title_match = re.search(r"<title[^>]*>(.*?)</title>", raw_html, flags=re.I | re.S)
+    title = re.sub(r"\s+", " ", (title_match.group(1) if title_match else "")).strip()
+    text = re.sub(r"(?is)<(script|style).*?>.*?</\\1>", " ", raw_html)
+    text = re.sub(r"(?s)<[^>]+>", " ", text)
+    text = text.replace("&nbsp;", " ").replace("&amp;", "&")
+    text = re.sub(r"\s+", " ", text).strip()
+    return title, text
+
+
+def _fetch_job_posting(url: str) -> tuple[str, str]:
+    req = UrlRequest(url, headers={"User-Agent": "Mozilla/5.0 (JobHunter)"})
+    try:
+        with urlopen(req, timeout=20) as resp:
+            raw = resp.read(1_500_000).decode("utf-8", errors="ignore")
+    except (HTTPError, URLError, TimeoutError) as exc:
+        raise HTTPException(400, f"Could not fetch job URL: {exc}") from exc
+    return _clean_job_html(raw)
+
+
+def _guess_title(description: str, fallback: str = "") -> str:
+    if fallback.strip():
+        return fallback.strip()
+    for line in re.split(r"[\r\n]+", description):
+        s = re.sub(r"\s+", " ", line).strip()
+        if len(s) >= 6:
+            return s[:140]
+    return "Target Role"
 
 
 # ------------------------------------------------------------------- views
@@ -236,6 +271,64 @@ def api_tailor(job_id: str, use_llm: bool = True, cover_letter: bool = True) -> 
         "resume": resume.to_dict(),
         "files": out["files"],
         "cover_letter": out["cover_letter"],
+    }
+
+
+@app.post("/api/tailor/custom")
+async def api_tailor_custom(request: Request) -> dict[str, Any]:
+    payload = await request.json()
+    job_url = str(payload.get("job_url", "") or "").strip()
+    desc = str(payload.get("job_description", "") or "").strip()
+    title = str(payload.get("title", "") or "").strip()
+    company = str(payload.get("company", "") or "").strip() or "Target Company"
+    location = str(payload.get("location", "") or "").strip()
+    use_llm = bool(payload.get("use_llm", True))
+
+    fetched_title = ""
+    if not desc and job_url:
+        fetched_title, desc = _fetch_job_posting(job_url)
+    if not desc or len(desc) < 80:
+        raise HTTPException(400, "Provide a job URL or paste a fuller job description.")
+
+    title = _guess_title(desc, fallback=title or fetched_title)
+    url = job_url or "manual://pasted-jd"
+    job = Job(source="manual", title=title, company=company, url=url,
+              location=location, description=desc).normalize()
+
+    from ..geo import eligible
+    verdict, countries = eligible(job.location, job.description)
+    if verdict != "eligible":
+        raise HTTPException(
+            400,
+            f"Role is not India-permissible for remote/hybrid hiring (detected: {countries or ['unknown']}).",
+        )
+
+    pipe = Pipeline()
+    pipe.store.upsert_jobs([job])
+    pipe.store.collapse_duplicates()
+    pipe._canonical = pipe.store.canonical_map([job.dedupe_key])  # noqa: SLF001
+
+    score = deterministic_score(job, pipe.profile)
+    parsed: dict[str, Any] | None = None
+    if use_llm and pipe.client.enabled:
+        score = llm_refine(pipe.client, job, pipe.profile, score)
+        try:
+            parsed, _ = parse_jd(pipe.client, job)
+        except LLMError:
+            parsed = None
+    score.job_id = pipe.cid(job)
+    pipe.store.save_score(score)
+
+    out = pipe.tailor(job, score, with_cover_letter=False, use_llm=use_llm, analysis=parsed)
+    resume = out["resume"]
+    return {
+        "job_id": score.job_id,
+        "generated_by": resume.generated_by,
+        "ats_alignment": resume.ats_alignment_score,
+        "downloads": _downloads(out["files"]),
+        "resume": resume.to_dict(),
+        "files": out["files"],
+        "source": "custom",
     }
 
 

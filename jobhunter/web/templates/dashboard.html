@@ -39,6 +39,48 @@ function pollDeepSearch(){
   setTimeout(tick, 3000);
 }
 
+async function tailorFromCustomJD(){
+  const btn = document.getElementById('customTailorBtn');
+  const jobUrl = (document.getElementById('customJobUrl')?.value || '').trim();
+  const jobDescription = (document.getElementById('customJobDescription')?.value || '').trim();
+  const title = (document.getElementById('customJobTitle')?.value || '').trim();
+  const company = (document.getElementById('customCompany')?.value || '').trim();
+  const location = (document.getElementById('customLocation')?.value || '').trim();
+  if(!jobUrl && !jobDescription){
+    toast('⚠️ Provide a job URL or paste the job description.', 7000);
+    return;
+  }
+  if(btn) btn.disabled = true;
+  toast('⏳ Building tailored resume from custom requirement…', 60000);
+  try{
+    const r = await fetch('/api/tailor/custom', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        job_url: jobUrl,
+        job_description: jobDescription,
+        title, company, location, use_llm: true
+      })
+    });
+    const j = await r.json();
+    if(!r.ok){
+      toast('<b>⚠️ Error</b><pre>'+esc(JSON.stringify(j,null,1).slice(0,700))+'</pre>', 12000);
+      if(btn) btn.disabled = false;
+      return;
+    }
+    const dl = downloadsHtml(j);
+    if(dl){
+      toast('<span class="close" onclick="hideToast()">✕</span><b>✅ Tailored resume ready</b>'+dl, 0);
+    }else{
+      toast('<b>✅ Done</b>', 7000);
+    }
+    if(btn) btn.disabled = false;
+  }catch(e){
+    toast('⚠️ ' + esc(e), 8000);
+    if(btn) btn.disabled = false;
+  }
+}
+
 {% if running %}
 document.addEventListener('DOMContentLoaded', ()=>{
   const btn = document.getElementById('deepSearchBtn');
@@ -112,6 +154,26 @@ document.addEventListener('DOMContentLoaded', ()=>{
     {% for task, chain in model_chain.items() %}
       <div><b>{{ task }}</b>: <span class="mono">{{ chain | join(' → ') }}</span></div>
     {% endfor %}
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Tailor from requirement link or text</h2>
+  <div class="small muted" style="margin-bottom:8px">
+    Paste a JD URL (Amazon/Workday/etc.) or paste the full job description to generate a tailored resume directly from your profile.
+  </div>
+  <div class="row">
+    <input id="customJobUrl" placeholder="JD URL (optional if description is pasted)" style="min-width:360px;flex:2">
+    <input id="customJobTitle" placeholder="Role title (optional)" style="min-width:220px;flex:1">
+  </div>
+  <div class="row" style="margin-top:8px">
+    <input id="customCompany" placeholder="Company (optional)" style="min-width:220px;flex:1">
+    <input id="customLocation" placeholder="Location (optional)" style="min-width:220px;flex:1">
+  </div>
+  <textarea id="customJobDescription" placeholder="Paste full job description here (optional if URL provided)"
+            style="margin-top:8px;width:100%;min-height:170px;background:var(--panel2);border:1px solid var(--line);color:var(--fg);border-radius:7px;padding:10px"></textarea>
+  <div class="row" style="margin-top:8px">
+    <button id="customTailorBtn" onclick="tailorFromCustomJD()">Tailor resume from this requirement</button>
   </div>
 </div>
 
