@@ -4,6 +4,8 @@ from __future__ import annotations
 import logging
 import os
 import re
+import threading
+import uuid
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -31,6 +33,9 @@ STATIC_DIR = Path(__file__).parent / "static"
 app = FastAPI(title="Deep Job Search & Tailored Resume Portal", version="1.0.0")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 _scheduler = None
+_custom_tailor_busy = threading.Lock()
+_custom_tailor_tasks_lock = threading.Lock()
+_custom_tailor_tasks: dict[str, dict[str, Any]] = {}
 
 
 @app.on_event("startup")
@@ -125,6 +130,84 @@ def _guess_title(description: str, fallback: str = "") -> str:
         if len(s) >= 6:
             return s[:140]
     return "Target Role"
+
+
+def _tailor_custom(payload: dict[str, Any]) -> dict[str, Any]:
+    """Build one custom resume outside the request-response lifecycle."""
+    job_url = str(payload.get("job_url", "") or "").strip()
+    desc = str(payload.get("job_description", "") or "").strip()
+    title = str(payload.get("title", "") or "").strip()
+    company = str(payload.get("company", "") or "").strip() or "Target Company"
+    location = str(payload.get("location", "") or "").strip()
+    use_llm = bool(payload.get("use_llm", True))
+
+    fetched_title = ""
+    if not desc and job_url:
+        fetched_title, desc = _fetch_job_posting(job_url)
+    if not desc or len(desc) < 80:
+        raise HTTPException(400, "Provide a job URL or paste a fuller job description.")
+
+    title = _guess_title(desc, fallback=title or fetched_title)
+    url = job_url or "manual://pasted-jd"
+    job = Job(source="manual", title=title, company=company, url=url,
+              location=location, description=desc).normalize()
+
+    from ..geo import eligible
+    verdict, countries = eligible(job.location, job.description)
+    if verdict != "eligible":
+        raise HTTPException(
+            400,
+            f"Role is not India-permissible for remote/hybrid hiring (detected: {countries or ['unknown']}).",
+        )
+
+    pipe = Pipeline()
+    pipe.store.upsert_jobs([job])
+    pipe.store.collapse_duplicates()
+    pipe._canonical = pipe.store.canonical_map([job.dedupe_key])  # noqa: SLF001
+
+    score = deterministic_score(job, pipe.profile)
+    parsed: dict[str, Any] = {}
+    if use_llm and pipe.client.enabled:
+        try:
+            parsed, _ = parse_jd(pipe.client, job)
+        except LLMError:
+            pass
+        # Reuse this single parsed JD for scoring and resume generation.
+        score = llm_refine(pipe.client, job, pipe.profile, score, parsed=parsed)
+    score.job_id = pipe.cid(job)
+    pipe.store.save_score(score)
+
+    out = pipe.tailor(job, score, with_cover_letter=False, use_llm=use_llm, analysis=parsed)
+    resume = out["resume"]
+    return {
+        "job_id": score.job_id,
+        "generated_by": resume.generated_by,
+        "ats_alignment": resume.ats_alignment_score,
+        "downloads": _downloads(out["files"]),
+        "resume": resume.to_dict(),
+        "files": out["files"],
+        "source": "custom",
+    }
+
+
+def _run_custom_tailor(task_id: str, payload: dict[str, Any]) -> None:
+    try:
+        result = _tailor_custom(payload)
+    except HTTPException as exc:
+        error = str(exc.detail)
+        log.info("custom tailoring %s rejected: %s", task_id, error)
+        with _custom_tailor_tasks_lock:
+            _custom_tailor_tasks[task_id].update(status="failed", error=error)
+    except Exception:
+        log.exception("custom tailoring %s failed", task_id)
+        with _custom_tailor_tasks_lock:
+            _custom_tailor_tasks[task_id].update(
+                status="failed", error="Resume generation failed. Please try again.")
+    else:
+        with _custom_tailor_tasks_lock:
+            _custom_tailor_tasks[task_id].update(status="completed", result=result)
+    finally:
+        _custom_tailor_busy.release()
 
 
 # ------------------------------------------------------------------- views
@@ -275,61 +358,27 @@ def api_tailor(job_id: str, use_llm: bool = True, cover_letter: bool = True) -> 
 
 
 @app.post("/api/tailor/custom")
-async def api_tailor_custom(request: Request) -> dict[str, Any]:
+async def api_tailor_custom(request: Request, background: BackgroundTasks) -> dict[str, Any]:
     payload = await request.json()
-    job_url = str(payload.get("job_url", "") or "").strip()
-    desc = str(payload.get("job_description", "") or "").strip()
-    title = str(payload.get("title", "") or "").strip()
-    company = str(payload.get("company", "") or "").strip() or "Target Company"
-    location = str(payload.get("location", "") or "").strip()
-    use_llm = bool(payload.get("use_llm", True))
+    if not _custom_tailor_busy.acquire(blocking=False):
+        return {"started": False, "reason": "a custom resume is already being generated"}
 
-    fetched_title = ""
-    if not desc and job_url:
-        fetched_title, desc = _fetch_job_posting(job_url)
-    if not desc or len(desc) < 80:
-        raise HTTPException(400, "Provide a job URL or paste a fuller job description.")
+    task_id = uuid.uuid4().hex
+    with _custom_tailor_tasks_lock:
+        _custom_tailor_tasks.clear()
+        _custom_tailor_tasks[task_id] = {"status": "running"}
+    background.add_task(_run_custom_tailor, task_id, payload)
+    return {"started": True, "task_id": task_id,
+            "message": "custom resume generation started"}
 
-    title = _guess_title(desc, fallback=title or fetched_title)
-    url = job_url or "manual://pasted-jd"
-    job = Job(source="manual", title=title, company=company, url=url,
-              location=location, description=desc).normalize()
 
-    from ..geo import eligible
-    verdict, countries = eligible(job.location, job.description)
-    if verdict != "eligible":
-        raise HTTPException(
-            400,
-            f"Role is not India-permissible for remote/hybrid hiring (detected: {countries or ['unknown']}).",
-        )
-
-    pipe = Pipeline()
-    pipe.store.upsert_jobs([job])
-    pipe.store.collapse_duplicates()
-    pipe._canonical = pipe.store.canonical_map([job.dedupe_key])  # noqa: SLF001
-
-    score = deterministic_score(job, pipe.profile)
-    parsed: dict[str, Any] | None = None
-    if use_llm and pipe.client.enabled:
-        score = llm_refine(pipe.client, job, pipe.profile, score)
-        try:
-            parsed, _ = parse_jd(pipe.client, job)
-        except LLMError:
-            parsed = None
-    score.job_id = pipe.cid(job)
-    pipe.store.save_score(score)
-
-    out = pipe.tailor(job, score, with_cover_letter=False, use_llm=use_llm, analysis=parsed)
-    resume = out["resume"]
-    return {
-        "job_id": score.job_id,
-        "generated_by": resume.generated_by,
-        "ats_alignment": resume.ats_alignment_score,
-        "downloads": _downloads(out["files"]),
-        "resume": resume.to_dict(),
-        "files": out["files"],
-        "source": "custom",
-    }
+@app.get("/api/tailor/custom/{task_id}")
+def api_tailor_custom_status(task_id: str) -> dict[str, Any]:
+    with _custom_tailor_tasks_lock:
+        task = _custom_tailor_tasks.get(task_id)
+        if task is None:
+            raise HTTPException(404, "custom tailoring task not found")
+        return {"task_id": task_id, **task}
 
 
 @app.post("/api/jobs/{job_id}/status")

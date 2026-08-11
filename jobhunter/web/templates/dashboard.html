@@ -2,6 +2,7 @@
 {% block content %}
 <script>
 let __deepSearchPolling = false;
+let __customTailorPolling = false;
 
 async function runDeepSearch(){
   const btn = document.getElementById('deepSearchBtn');
@@ -51,7 +52,7 @@ async function tailorFromCustomJD(){
     return;
   }
   if(btn) btn.disabled = true;
-  toast('⏳ Building tailored resume from custom requirement…', 60000);
+  toast('⏳ Resume generation in progress…', 0);
   try{
     const r = await fetch('/api/tailor/custom', {
       method:'POST',
@@ -63,21 +64,41 @@ async function tailorFromCustomJD(){
       })
     });
     const j = await r.json();
-    if(!r.ok){
+    if(!r.ok || !j.started){
       toast('<b>⚠️ Error</b><pre>'+esc(JSON.stringify(j,null,1).slice(0,700))+'</pre>', 12000);
       if(btn) btn.disabled = false;
       return;
     }
-    const dl = downloadsHtml(j);
-    if(dl){
-      toast('<span class="close" onclick="hideToast()">✕</span><b>✅ Tailored resume ready</b>'+dl, 0);
-    }else{
-      toast('<b>✅ Done</b>', 7000);
-    }
-    if(btn) btn.disabled = false;
+    pollCustomTailor(j.task_id, btn);
   }catch(e){
     toast('⚠️ ' + esc(e), 8000);
     if(btn) btn.disabled = false;
+  }
+
+  function pollCustomTailor(taskId, btn){
+    if(__customTailorPolling) return;
+    __customTailorPolling = true;
+    const tick = async ()=>{
+      try{
+        const r = await fetch('/api/tailor/custom/'+encodeURIComponent(taskId));
+        const j = await r.json();
+        if(!r.ok || j.status === 'failed'){
+          __customTailorPolling = false;
+          if(btn) btn.disabled = false;
+          toast('<b>⚠️ Error</b><pre>'+esc(j.error || 'Resume generation failed.')+'</pre>', 12000);
+          return;
+        }
+        if(j.status === 'completed'){
+          __customTailorPolling = false;
+          if(btn) btn.disabled = false;
+          const dl = downloadsHtml(j.result);
+          toast(dl ? '<span class="close" onclick="hideToast()">✕</span><b>✅ Tailored resume ready</b>'+dl : '<b>✅ Done</b>', dl ? 0 : 7000);
+          return;
+        }
+      }catch(e){ /* transient request failure; continue polling */ }
+      setTimeout(tick, 3000);
+    };
+    setTimeout(tick, 1500);
   }
 }
 

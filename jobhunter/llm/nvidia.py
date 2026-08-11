@@ -47,7 +47,6 @@ BASE_URL = "https://integrate.api.nvidia.com/v1"
 # completion. `deepseek-v4-pro` excluded: it hangs for the full timeout
 # instead of failing fast (see module docstring).
 NVIDIA_DEFAULT_MODELS = [
-    "deepseek-ai/deepseek-v4-flash",
     "stepfun-ai/step-3.7-flash",
     "nvidia/nemotron-3-ultra-550b-a55b",
     "nvidia/nemotron-3-super-120b-a12b",
@@ -56,6 +55,8 @@ NVIDIA_DEFAULT_MODELS = [
     "openai/gpt-oss-20b",
 ]
 NVIDIA_DEFAULT_DAILY_CAP = 300
+RETIRED_MODELS = {"deepseek-ai/deepseek-v4-flash"}
+PERMANENT_CLIENT_ERRORS = {400, 401, 403, 404, 410, 422}
 
 # Own ledger table so NVIDIA usage can never be confused with, or accounted
 # against, the OpenRouter budget.
@@ -73,9 +74,10 @@ def api_key() -> str:
 
 def _models() -> list[str]:
     raw = os.getenv("NVIDIA_MODELS", "").strip()
-    if not raw:
-        return list(NVIDIA_DEFAULT_MODELS)
-    return [m.strip() for m in raw.split(",") if m.strip()] or list(NVIDIA_DEFAULT_MODELS)
+    configured = [m.strip() for m in raw.split(",") if m.strip()] if raw else NVIDIA_DEFAULT_MODELS
+    # A previously deployed NVIDIA_MODELS value can outlive a retired catalog
+    # entry. Filter it here rather than making every request pay for its 410.
+    return [model for model in configured if model not in RETIRED_MODELS]
 
 
 def _daily_cap() -> int:
@@ -165,7 +167,7 @@ class NvidiaClient:
              response_format_json: bool = False,
              max_tokens: int | None = None,
              temperature: float | None = None,
-             timeout: int = 180,
+             timeout: int = 45,
              max_attempts_per_model: int = 2) -> tuple[str, str, dict[str, Any]]:
         """Return ``(text, model_used, usage)``; raise on total failure.
 
@@ -203,6 +205,7 @@ class NvidiaClient:
 
                 t0 = time.monotonic()
                 err = ""
+                status_code: int | None = None
                 try:
                     self._spend()  # count the attempt before it can fail, like the budget guard
                     r = self._session.post(
@@ -211,6 +214,7 @@ class NvidiaClient:
                                  "Content-Type": "application/json"},
                         json=payload, timeout=timeout)
                     latency = int((time.monotonic() - t0) * 1000)
+                    status_code = r.status_code
 
                     body: dict[str, Any] = {}
                     try:
@@ -234,6 +238,10 @@ class NvidiaClient:
                 self._log(task, model, False, latency, err)
                 errors.append(f"{model}: {err}")
                 log.warning("[%s] nvidia %s attempt %d failed: %s", task, model, attempt, err)
+                # Authentication, validation, and retired-model failures cannot
+                # improve on a retry. Move straight to the next provider model.
+                if status_code in PERMANENT_CLIENT_ERRORS:
+                    break
                 if attempt < max_attempts_per_model:
                     time.sleep(2)
 
