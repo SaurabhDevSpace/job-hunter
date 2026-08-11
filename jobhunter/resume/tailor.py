@@ -81,7 +81,7 @@ def build_resume_payload(job: Job, profile: Profile, score: Any,
             data, model = client.json_call("resume", P.RESUME_SYSTEM, user,
                                           schema_hint=P.RESUME_SCHEMA)
             if isinstance(data, dict):
-                resume = _from_llm(data, profile, model, job_title=job.title)
+                resume = _from_llm(data, profile, model, job=job, score=score)
                 if resume:
                     return resume
         except LLMError as exc:
@@ -91,7 +91,7 @@ def build_resume_payload(job: Job, profile: Profile, score: Any,
 
 
 def _from_llm(data: dict[str, Any], profile: Profile, model: str,
-              *, job_title: str | None = None) -> TailoredResume | None:
+              *, job: Job, score: Any) -> TailoredResume | None:
     """Validate LLM output against ground truth; repair rather than reject where possible."""
     truth = {(_key(r["company"]), _key(r["title"])): r for r in profile.experience}
     truth_by_company = {_key(r["company"]): r for r in profile.experience}
@@ -136,29 +136,26 @@ def _from_llm(data: dict[str, Any], profile: Profile, model: str,
     valid_certs = {_key(c) for c in profile.certifications}
     certs = [c for c in certs if _key(c) in valid_certs] or profile.certifications
 
-    education = data.get("education") or []
-    if not isinstance(education, list) or not education:
-        education = [{"degree": e["degree"], "institution": e["institution"],
-                      "dates": e["dates"], "details": e.get("details", "")}
-                     for e in profile.education]
+    skills = _ground_truth_skills(data.get("technical_skills"), profile)
 
-    skills = data.get("technical_skills")
-    if not isinstance(skills, dict) or not skills:
-        skills = profile.skills
-
-    summary = _clean_bullet(data.get("professional_summary") or profile.summary)
+    claimable = _claimable_keywords(profile, list(getattr(score, "ats_keywords", []) or []))
+    # Preserve an LLM's factual bullet selection but keep the summary itself
+    # transferable, so a current employer's domain never dominates the framing.
+    summary = _transferable_summary(profile, job, claimable, profile.summary)
     summary = (_enforce_numeric_truth([summary], allowed_numbers, "summary")
                or [re.sub(r"\s+", " ", profile.summary).strip()])[0]
 
     return TailoredResume(
-        target_title=_safe_target_title(data.get("target_title"), profile, job_title),
+        # The headline is deterministic so an LLM cannot turn a transferable
+        # candidate into an unproven target profession.
+        target_title=_safe_target_title(profile, job),
         professional_summary=summary,
-        core_competencies=_strlist(data.get("core_competencies"))[:12] or _default_competencies(profile),
+        core_competencies=_ground_truth_competencies(data.get("core_competencies"), profile),
         experience=experience,
         technical_skills={str(k): _strlist(v) for k, v in skills.items() if _strlist(v)},
         certifications=certs[:10],
-        education=education,
-        selected_achievements=(_strlist(data.get("selected_achievements")) or profile.achievements)[:3],
+        education=_profile_education(profile),
+        selected_achievements=_rank_achievements(profile, job)[:3],
         ats_keywords_included=_strlist(data.get("ats_keywords_included"))[:30],
         keywords_intentionally_omitted=_strlist(data.get("keywords_intentionally_omitted"))[:12],
         ats_alignment_score=_float(data.get("ats_alignment_score")),
@@ -221,16 +218,14 @@ def deterministic_tailor(job: Job, profile: Profile, ats_keywords: list[str]) ->
     ats_pct = round(100 * len(included) / max(1, len(ats_keywords[:20])), 1)
 
     return TailoredResume(
-        target_title=_safe_target_title(None, profile, job_title=job.title),
-        professional_summary=summary,
+        target_title=_safe_target_title(profile, job),
+        professional_summary=_transferable_summary(profile, job, claimable, summary),
         core_competencies=comps,
         experience=experience,
         technical_skills=profile.skills,
         certifications=profile.certifications[:10],
-        education=[{"degree": e["degree"], "institution": e["institution"],
-                    "dates": e["dates"], "details": e.get("details", "")}
-                   for e in profile.education],
-        selected_achievements=profile.achievements[:3],
+        education=_profile_education(profile),
+        selected_achievements=_rank_achievements(profile, job)[:3],
         ats_keywords_included=included[:30],
         keywords_intentionally_omitted=omitted[:12],
         ats_alignment_score=ats_pct,
@@ -242,29 +237,85 @@ def deterministic_tailor(job: Job, profile: Profile, ats_keywords: list[str]) ->
     )
 
 
-def _safe_target_title(raw_title: Any, profile: Profile, *, job_title: str | None = None) -> str:
-    """Keep the headline truthful and adjacent to the target role, never identical to the JD title."""
-    candidate = _clean_bullet(raw_title or "").strip()
-    if candidate:
-        cand_key = re.sub(r"\s+", " ", candidate).lower()
-        job_key = re.sub(r"\s+", " ", str(job_title or "")).lower()
-        if cand_key and job_key and cand_key == job_key:
-            candidate = ""
-    if candidate:
-        return candidate
+def _safe_target_title(profile: Profile, job: Job) -> str:
+    """Return a broad, proven role-family headline instead of a JD title."""
+    names = [c.name for c in _relevant_competencies(profile, job)]
+    analytic = any("Analytics" in name for name in names)
+    process = any("Process" in name or "Continuous Improvement" in name for name in names)
+    transformation = any("Transformation" in name or "Automation" in name for name in names)
+    if analytic and process:
+        return "Business Operations, Process Excellence & Analytics Professional"
+    if analytic and transformation:
+        return "Business Analytics & Digital Transformation Professional"
+    if process and transformation:
+        return "Process Excellence & Transformation Professional"
+    if names:
+        return f"{names[0]} Professional"
+    return "Business Operations & Transformation Professional"
 
-    for fallback in (
-        _clean_bullet(profile.headline or "").strip(),
-        _clean_bullet(getattr(profile, "current_title", "") or "").strip(),
-    ):
-        if fallback:
-            return fallback
 
-    return "Operations Transformation Professional"
+def _relevant_competencies(profile: Profile, job: Job) -> list[Any]:
+    """Candidate-proven capabilities ordered by target-role relevance."""
+    target = f"{job.title} {job.department} {job.description}".lower()
+    ranked = []
+    for competency in profile.competencies:
+        overlap = sum(form in target for form in competency.surface_forms if len(form) > 3)
+        ranked.append((overlap, competency.weight, competency))
+    return [item[2] for item in sorted(ranked, key=lambda item: (-item[0], -item[1], item[2].name))]
+
+
+def _profile_education(profile: Profile) -> list[dict[str, Any]]:
+    """Keep education achievements exactly as captured in the source profile."""
+    return [{"degree": e["degree"], "institution": e["institution"],
+             "dates": e["dates"], "details": e.get("details", "")}
+            for e in profile.education]
+
+
+def _rank_achievements(profile: Profile, job: Job) -> list[str]:
+    """Prioritize verified achievements whose language maps to the target role."""
+    target_terms = set(re.findall(r"[a-z]{4,}", f"{job.title} {job.description}".lower()))
+    return sorted(profile.achievements,
+                  key=lambda achievement: sum(term in target_terms for term in re.findall(
+                      r"[a-z]{4,}", achievement.lower())), reverse=True)
+
+
+def _transferable_summary(profile: Profile, job: Job, claimable: list[str], fallback: str) -> str:
+    """Lead with proven transferable capability, not the current employer's domain."""
+    capabilities = [c.name for c in _relevant_competencies(profile, job)[:3]]
+    if not capabilities:
+        return fallback
+    summary = (f"{_safe_target_title(profile, job)} with {profile.years_experience}+ years of experience "
+               f"delivering measurable outcomes through {', '.join(capabilities)}.")
+    if claimable:
+        summary += f" Brings demonstrated experience aligned to {', '.join(claimable[:4])}."
+    return summary
 
 
 def _default_competencies(profile: Profile) -> list[str]:
     return [c.name for c in sorted(profile.competencies, key=lambda c: -c.weight)][:10]
+
+
+def _ground_truth_competencies(value: Any, profile: Profile) -> list[str]:
+    """Retain only LLM competency labels backed by the profile."""
+    allowed = {_key(item): item for item in (_default_competencies(profile) + profile.flat_skills())}
+    chosen = [allowed[_key(item)] for item in _strlist(value) if _key(item) in allowed]
+    return (chosen or _default_competencies(profile))[:12]
+
+
+def _ground_truth_skills(value: Any, profile: Profile) -> dict[str, list[str]]:
+    """Do not let an LLM add an unsupported specialization or tool."""
+    if not isinstance(value, dict):
+        return profile.skills
+    allowed = {_key(skill): (group, skill)
+               for group, items in profile.skills.items() for skill in items}
+    out: dict[str, list[str]] = {}
+    for items in value.values():
+        for item in _strlist(items):
+            verified = allowed.get(_key(item))
+            if verified:
+                group, skill = verified
+                out.setdefault(group, []).append(skill)
+    return out or profile.skills
 
 
 _GENERIC_KW = re.compile(

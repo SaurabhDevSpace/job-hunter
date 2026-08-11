@@ -133,7 +133,9 @@ class Profile:
             "EDUCATION:",
         ]
         for e in self.education:
-            lines.append(f"  - {e['degree']}, {e['institution']} ({e['dates']})")
+            details = str(e.get("details", "")).strip()
+            suffix = f" | {details}" if details else ""
+            lines.append(f"  - {e['degree']}, {e['institution']} ({e['dates']}){suffix}")
         lines += ["", "EXPERIENCE (factual bullets — do not invent beyond these):"]
         for role in self.experience:
             lines.append(f"  {role['title']} | {role['company']} | {role['dates']}")
