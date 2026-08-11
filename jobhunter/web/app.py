@@ -20,7 +20,7 @@ from fastapi.templating import Jinja2Templates
 from ..config import OUTPUT_DIR, load_model_config, load_profile, load_search_matrix
 from ..db import Store
 from ..llm import LLMError, OpenRouterClient
-from ..models import CUSTOM_TAILOR_SOURCE, Job
+from ..models import Job
 from ..pipeline import Pipeline
 from ..scoring import deterministic_score, llm_refine, parse_jd
 from ..scheduler import build_scheduler, daily_job, is_running, last_report
@@ -36,6 +36,8 @@ _scheduler = None
 _custom_tailor_busy = threading.Lock()
 _custom_tailor_tasks_lock = threading.Lock()
 _custom_tailor_tasks: dict[str, dict[str, Any]] = {}
+
+CUSTOM_TAILOR_SOURCE = "My Own Search"
 
 
 @app.on_event("startup")
