@@ -237,6 +237,53 @@ def deterministic_tailor(job: Job, profile: Profile, ats_keywords: list[str]) ->
     )
 
 
+_HEADLINE_STOPWORDS = {"a", "an", "and", "at", "for", "in", "of", "the", "to", "with",
+                       "associate", "executive", "junior", "lead", "manager", "senior"}
+_TITLE_LEVEL_WORDS = {
+    "i", "ii", "iii", "iv", "v", "sr", "sr.", "jr", "jr.", "senior", "junior",
+    "lead", "staff", "principal", "associate", "entry", "level", "intern",
+    "internship", "manager", "director", "head", "vp", "vice", "president",
+    "chief", "officer", "1", "2", "3", "4",
+}
+
+
+def _headline_words(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z]{3,}", text.lower()) if w not in _HEADLINE_STOPWORDS}
+
+
+def _clean_job_title_for_headline(job_title: str) -> str:
+    """Strip seniority/level noise from a JD's own title, keeping the role core.
+
+    Collapses dual-role postings like "ML Engineer I / AI Engineer" into a
+    single readable phrase; the caller's grounding check decides whether it's
+    safe to use.
+    """
+    parts = re.split(r"\s*/\s*|\s*\|\s*", job_title)
+    cleaned_parts: list[str] = []
+    seen_words: set[str] = set()
+    for part in parts:
+        part = re.sub(r"\([^)]*\)", " ", part)
+        words = [w for w in re.split(r"\s+", part.strip()) if w]
+        kept = [w for w in words if w.lower().strip(".,") not in _TITLE_LEVEL_WORDS]
+        phrase = " ".join(kept).strip(" -,")
+        if not phrase:
+            continue
+        key = phrase.lower()
+        if key in seen_words:
+            continue
+        seen_words.add(key)
+        cleaned_parts.append(phrase)
+    if not cleaned_parts:
+        return ""
+    deduped: list[str] = []
+    for phrase in cleaned_parts:
+        phrase_words = _headline_words(phrase)
+        if any(phrase_words <= _headline_words(existing) for existing in deduped):
+            continue
+        deduped.append(phrase)
+    return " & ".join(deduped[:2])
+
+
 def _safe_target_title(profile: Profile, job: Job) -> str:
     """Choose a JD-aware, proven role family without copying the applied title."""
     labels = {
@@ -261,11 +308,24 @@ def _safe_target_title(profile: Profile, job: Job) -> str:
     ]
     matched = [item for item in matched if item[0] > 0]
     matched.sort(key=lambda item: (-item[0], -item[1], item[2]))
-    if matched:
-        # Keep a single, strongest proven family so the headline is focused and
-        # never rendered as dual slash-separated titles.
-        return matched[0][2]
-    return "Business Operations & Transformation"
+    fallback = matched[0][2] if matched else "Business Operations & Transformation"
+
+    # Prefer a title drawn from the job's own wording when it's substantially
+    # grounded in the candidate's real experience/skills/competencies — it
+    # reads as far more targeted to the reviewer than a generic capability
+    # family label, and we never claim a role the candidate can't back up.
+    cleaned = _clean_job_title_for_headline(job.title or "")
+    if cleaned:
+        grounded_text = " ".join([profile.headline,
+                                   " ".join(role.get("title", "") for role in profile.experience),
+                                   " ".join(profile.flat_skills()),
+                                   " ".join(c.name for c in profile.competencies),
+                                   " ".join(f for c in profile.competencies for f in c.surface_forms)])
+        cleaned_words = _headline_words(cleaned)
+        grounded_words = _headline_words(grounded_text)
+        if cleaned_words and len(cleaned_words & grounded_words) / len(cleaned_words) >= 0.6:
+            return cleaned
+    return fallback
 
 
 def _relevant_competencies(profile: Profile, job: Job) -> list[Any]:
@@ -285,12 +345,72 @@ def _profile_education(profile: Profile) -> list[dict[str, Any]]:
             for e in profile.education]
 
 
+_HIGH_IMPACT_ACHIEVEMENT_RE = re.compile(
+    r"\bpatent(?:s|ed)?\b|\baward(?:s|ed)?\b|\bwinner\b|\bwon\b|\brecognition\b|"
+    r"\brecognized\b|\bhonou?r(?:s|ed)?\b|\bpublication\b|\bpublished\b|"
+    r"\bgranted\b|\btop performer\b|\branked\s*#?\s*1\b|\bfirst place\b|"
+    r"\bgold medal\b|\bcertificat\w*\b",
+    re.I,
+)
+_PATENT_CLAIM_RE = re.compile(r"\bpatents?\b", re.I)
+_AWARD_LIKE_RE = re.compile(
+    r"\baward\b|\brecognition\b|\bplaque\b|\bhackathon\b|\bwinner\b|\bhonou?r\b|"
+    r"\btournament\b|\bcertificat\w*\b",
+    re.I,
+)
+
+
+def _synthesized_patent_summary(profile: Profile) -> str | None:
+    """If the achievements list contains an unlabelled cluster of individual
+    patent write-ups (title: description), summarise them as one verified,
+    countable bullet so the count itself (e.g. "6 patents") isn't lost to
+    JD-overlap ranking. Only fires when some OTHER achievement already claims
+    a patent portfolio in words, keeping the synthesis anchored to a real
+    candidate statement rather than a guess.
+    """
+    if not any(_PATENT_CLAIM_RE.search(a) for a in profile.achievements):
+        return None
+    patent_items = [
+        a for a in profile.achievements
+        if ":" in a and not _AWARD_LIKE_RE.search(a) and not _PATENT_CLAIM_RE.search(a)
+    ]
+    if len(patent_items) < 2:
+        return None
+    titles = [a.split(":", 1)[0].strip() for a in patent_items]
+    lead = ", ".join(titles[:2])
+    remaining = len(patent_items) - 2
+    tail = f", and {remaining} more." if remaining > 0 else "."
+    return (f"Co-invented {len(patent_items)} technical innovations recognised as "
+            f"patented work, including {lead}{tail}")
+
+
 def _rank_achievements(profile: Profile, job: Job) -> list[str]:
-    """Prioritize verified achievements whose language maps to the target role."""
+    """Prioritize verified achievements whose language maps to the target role.
+
+    Standout categories (patents, awards, publications, top rankings) are
+    boosted so they surface even when their wording doesn't overlap much with
+    JD keywords — a "6 patents filed" line is a differentiator for almost any
+    role, not just ones that literally say "patent".
+    """
     target_terms = set(re.findall(r"[a-z]{4,}", f"{job.title} {job.description}".lower()))
-    return sorted(profile.achievements,
-                  key=lambda achievement: sum(term in target_terms for term in re.findall(
-                      r"[a-z]{4,}", achievement.lower())), reverse=True)
+    patent_summary = _synthesized_patent_summary(profile)
+    achievements = list(profile.achievements)
+    if patent_summary:
+        raw_items = [
+            a for a in profile.achievements
+            if ":" in a and not _AWARD_LIKE_RE.search(a) and not _PATENT_CLAIM_RE.search(a)
+        ]
+        achievements = [a for a in achievements if a not in raw_items]
+        achievements.append(patent_summary)
+
+    def rank(achievement: str) -> tuple[int, int]:
+        overlap = sum(term in target_terms for term in re.findall(r"[a-z]{4,}", achievement.lower()))
+        is_patent_summary = achievement == patent_summary
+        high_impact = bool(_HIGH_IMPACT_ACHIEVEMENT_RE.search(achievement)) or is_patent_summary
+        bonus = 4 if is_patent_summary else (3 if high_impact else 0)
+        return (overlap + bonus, int(bool(_quantities(achievement))))
+
+    return sorted(achievements, key=rank, reverse=True)
 
 
 def _transferable_summary(profile: Profile, job: Job, claimable: list[str], fallback: str) -> str:

@@ -32,20 +32,93 @@ def clean_html(text: str | None) -> str:
     return "\n".join(ln for ln in lines if ln)
 
 
-def detect_work_mode(*texts: str | None) -> str:
-    """Return 'remote' | 'hybrid' | 'onsite' | 'unknown'."""
-    blob = " ".join(t.lower() for t in texts if t)
-    if not blob:
+_HYBRID_RE = re.compile(
+    r"\bhybrid\b|\bflexib\w* (?:work|location)\b|\d\s*days? (?:a week )?in (?:the )?office"
+)
+# A generic "remote" mention inside a big JD blob (benefits boilerplate, EEO
+# text, "some teams offer remote flexibility" etc.) is NOT proof this specific
+# posting is remote. Only phrases that assert the *arrangement of this job*
+# count as a strong remote signal.
+_STRONG_REMOTE_RE = re.compile(
+    r"\b(fully remote|100% remote|remote-first|remote first|remote only|"
+    r"this (?:is|role is|position is|job is) (?:a |an )?(?:fully )?remote|"
+    r"remote position|remote role|remote job|work from home|wfh|"
+    r"telecommut\w+|distributed team)\b"
+)
+_BARE_REMOTE_RE = re.compile(r"\bremote\b")
+_ONSITE_RE = re.compile(
+    r"\bnot remote\b|\bno remote\b|\bon-?site only\b|\bon-?site\b|\bin-?office\b|\bin person\b|"
+    r"\bmust (?:work|be) (?:on-?site|in(?:-| )office)\b"
+)
+_UNRESTRICTED_LOC_RE = re.compile(r"\bworldwide\b|\banywhere\b")
+# For long JD prose, "hybrid" must anchor to this job's own arrangement, not a
+# generic mention of company culture/other-teams flexibility.
+_STRONG_HYBRID_RE = re.compile(
+    r"\d\s*days? (?:a week )?in (?:the )?office|"
+    r"this (?:is|role is|position is|job is) (?:a |an )?hybrid|"
+    r"hybrid (?:position|role|schedule|work model|working model)"
+)
+
+
+def detect_work_mode(location: str | None = None, title: str | None = None,
+                      description: str | None = None) -> str:
+    """Return 'remote' | 'hybrid' | 'onsite' | 'unknown'.
+
+    Location field is the most authoritative signal boards give us (it is
+    short, structured, and rarely contains unrelated boilerplate). A named
+    place ("Bengaluru, India", "Austin, TX") with no remote/hybrid qualifier
+    means the role is anchored to that office; a generic "remote" mention
+    later in a long JD (benefits text, other-teams policy, etc.) should not
+    override that unless it explicitly asserts *this job* is remote.
+    """
+    loc = (location or "").lower().strip()
+    ti = (title or "").lower()
+    desc = (description or "").lower()
+
+    if not loc and not ti and not desc:
         return "unknown"
-    if re.search(r"\bhybrid\b|\bflexib\w* (?:work|location)\b|\d\s*days? (?:a week )?in (?:the )?office", blob):
+
+    # 1. Location field verdict (strongest, most specific signal).
+    if loc:
+        if _HYBRID_RE.search(loc):
+            return "hybrid"
+        if _BARE_REMOTE_RE.search(loc):
+            if _ONSITE_RE.search(loc):
+                return "onsite"
+            return "remote"
+        has_named_place = bool(re.search(r"[a-z]{3,}", loc)) and not _UNRESTRICTED_LOC_RE.search(loc)
+    else:
+        has_named_place = False
+
+    # 2. Title is short and purpose-built too; trust it almost as much.
+    if _HYBRID_RE.search(ti):
         return "hybrid"
-    if re.search(r"\b(fully |100% |work from home|wfh|remote-first|remote first|telecommut\w+|distributed team)\b", blob):
+    if _BARE_REMOTE_RE.search(ti) and not has_named_place:
         return "remote"
-    if re.search(r"\bremote\b", blob):
-        if re.search(r"\bnot remote\b|\bno remote\b|\bon-?site only\b", blob):
-            return "onsite"
+
+    # 3. Description: only strong, job-specific phrasing counts. A bare
+    # "remote" occurrence anywhere in a long JD is treated as unclear on its
+    # own once the location already names a real office.
+    strong_hybrid = _STRONG_HYBRID_RE.search(desc)
+    strong_remote = _STRONG_REMOTE_RE.search(desc)
+    strong_onsite = _ONSITE_RE.search(desc)
+
+    if has_named_place:
+        # Location already anchors this role to a real office; only an
+        # explicit "this job is remote/hybrid" claim can override that.
+        if strong_hybrid:
+            return "hybrid"
+        if strong_remote:
+            return "remote"
+        return "onsite"
+
+    if strong_hybrid:
+        return "hybrid"
+    if strong_remote:
         return "remote"
-    if re.search(r"\bon-?site\b|\bin-?office\b|\bin person\b", blob):
+    if _BARE_REMOTE_RE.search(desc):
+        return "remote"
+    if strong_onsite:
         return "onsite"
     return "unknown"
 
