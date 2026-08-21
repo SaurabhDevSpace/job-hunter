@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["python311", "pango", "cairo", "gdk-pixbuf", "fontconfig", "dejavu_fonts"]
+
+[phases.install]
+cmds = ["pip install --upgrade pip", "pip install -r requirements.txt", "pip install weasyprint pypdf"]
+
+[start]
+cmd = "python -m jobhunter.cli serve --host 0.0.0.0 --port $PORT"
