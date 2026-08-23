@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import html as _html
 import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
@@ -25,8 +26,7 @@ def clean_html(text: str | None) -> str:
     out = text.replace("</li>", "\n").replace("<br>", "\n").replace("<br/>", "\n")
     out = out.replace("</p>", "\n\n").replace("<li>", "- ")
     out = _TAG.sub(" ", out)
-    for k, v in _ENTITY.items():
-        out = out.replace(k, v)
+    out = _html.unescape(out)
     out = re.sub(r"&#\d+;", " ", out)
     lines = [_WS.sub(" ", ln).strip() for ln in out.splitlines()]
     return "\n".join(ln for ln in lines if ln)
@@ -162,9 +162,10 @@ class Job:
         return f"{self.title}\n{self.company}\n{self.department}\n{self.location}\n{self.description}"
 
     def normalize(self) -> "Job":
-        self.title = _WS.sub(" ", (self.title or "")).strip()
-        self.company = _WS.sub(" ", (self.company or "")).strip()
-        self.location = _WS.sub(" ", (self.location or "")).strip()
+        self.title = _WS.sub(" ", _html.unescape(self.title or "")).strip()
+        self.company = _WS.sub(" ", _html.unescape(self.company or "")).strip()
+        self.location = _WS.sub(" ", _html.unescape(self.location or "")).strip()
+        self.department = _html.unescape(self.department or "").strip()
         self.description = clean_html(self.description)
         if self.work_mode in ("", "unknown"):
             self.work_mode = detect_work_mode(self.location, self.title, self.description[:4000])
