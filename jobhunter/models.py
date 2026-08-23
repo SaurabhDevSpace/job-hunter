@@ -138,10 +138,18 @@ class Job:
     employment_type: str = ""
     raw: dict[str, Any] = field(default_factory=dict, repr=False)
     fetched_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    # Persisted primary key. Derived once at construction; when a Job is
+    # reloaded from the DB the stored id is passed back in so identity never
+    # drifts if title/company/URL text is later normalised or cleaned.
+    job_id: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.job_id:
+            self.job_id = self.derived_id
 
     # ---------------------------------------------------------------- derived
     @property
-    def job_id(self) -> str:
+    def derived_id(self) -> str:
         key = f"{self.company.strip().lower()}|{_norm_title(self.title)}|{self.url.split('?')[0].lower()}"
         return hashlib.sha1(key.encode("utf-8")).hexdigest()[:16]
 

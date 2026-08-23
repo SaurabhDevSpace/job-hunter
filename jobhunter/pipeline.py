@@ -328,6 +328,7 @@ class Pipeline:
     def job_from_row(self, row: dict[str, Any]) -> Job:
         return Job(
             source=row["source"], title=row["title"], company=row["company"], url=row["url"],
+            job_id=row["job_id"],
             description=row.get("description") or "", location=row.get("location") or "",
             work_mode=row.get("work_mode") or "unknown", salary=row.get("salary") or "",
             posted_at=row.get("posted_at") or "", department=row.get("department") or "",
