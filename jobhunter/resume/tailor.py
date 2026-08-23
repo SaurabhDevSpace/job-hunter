@@ -245,6 +245,13 @@ _TITLE_LEVEL_WORDS = {
     "internship", "manager", "director", "head", "vp", "vice", "president",
     "chief", "officer", "1", "2", "3", "4",
 }
+_CORPORATE_PREFIX_RE = re.compile(
+    r"\b(?:GN|S&C|MC|PRH|IE|I&E|SC&E|TGP|CTS|GDS|FY\d{2})\b|"
+    r"\b(?:Industry\s*X|Digital\s*Engineering\s*R&D)\b|"
+    r"\b(?:Req|ReqID|Job\s*ID|ID|Ref|Position\s*#?)\s*[:#-]?\s*[A-Z0-9_\-]+|"
+    r"\b[A-Z]{1,4}\d{5,}\b",
+    re.I
+)
 
 
 def _headline_words(text: str) -> set[str]:
@@ -252,17 +259,27 @@ def _headline_words(text: str) -> set[str]:
 
 
 def _clean_job_title_for_headline(job_title: str) -> str:
-    """Strip seniority/level noise from a JD's own title, keeping the role core.
+    """Strip corporate requisition codes, level noise, and taxonomy artifacts from a JD title."""
+    raw = job_title or ""
+    t = _CORPORATE_PREFIX_RE.sub(" ", raw)
+    t = re.sub(r"\[[^\]]*\]", " ", t)
+    t = re.sub(r"\((?:[^)]*(?:remote|hybrid|india|full[- ]time|contract|req|id|tier|\d)[^)]*)\)", " ", t, flags=re.I)
+    t = re.sub(r"[-–—/|]+", " ", t)
+    t = re.sub(r"\s+", " ", t).strip(" -,–—|")
 
-    Collapses dual-role postings like "ML Engineer I / AI Engineer" into a
-    single readable phrase; the caller's grounding check decides whether it's
-    safe to use.
-    """
-    parts = re.split(r"\s*/\s*|\s*\|\s*", job_title)
+    # Normalize abbreviations into standard professional phrases
+    t = re.sub(r"\bOps\b", "Operations", t, flags=re.I)
+    t = re.sub(r"\bCI\b", "Continuous Improvement", t)
+    t = re.sub(r"\bSCM\b", "Supply Chain", t)
+    t = re.sub(r"\bProc\b", "Procurement", t, flags=re.I)
+    t = re.sub(r"\bProfessional\b", "", t, flags=re.I)
+    t = re.sub(r"\s+", " ", t).strip()
+
+    # Split on slash or pipe dividers to avoid dual roles
+    parts = re.split(r"\s*[/|]\s*", t)
     cleaned_parts: list[str] = []
     seen_words: set[str] = set()
     for part in parts:
-        part = re.sub(r"\([^)]*\)", " ", part)
         words = [w for w in re.split(r"\s+", part.strip()) if w]
         kept = [w for w in words if w.lower().strip(".,") not in _TITLE_LEVEL_WORDS]
         phrase = " ".join(kept).strip(" -,")
@@ -274,18 +291,18 @@ def _clean_job_title_for_headline(job_title: str) -> str:
         seen_words.add(key)
         cleaned_parts.append(phrase)
     if not cleaned_parts:
-        return ""
+        return t
     deduped: list[str] = []
     for phrase in cleaned_parts:
         phrase_words = _headline_words(phrase)
         if any(phrase_words <= _headline_words(existing) for existing in deduped):
             continue
         deduped.append(phrase)
-    return " & ".join(deduped[:2])
+    return " & ".join(deduped[:2]) if deduped else t
 
 
 def _safe_target_title(profile: Profile, job: Job) -> str:
-    """Choose a JD-aware, proven role family without copying the applied title."""
+    """Synthesize a calibrated target title that bridges candidate grounding with target JD requirements."""
     labels = {
         "Strategic Sourcing & Procurement": "Strategic Sourcing & Procurement",
         "Spend Analytics & Cost Optimization": "Spend Analytics & Cost Optimization",
@@ -310,21 +327,36 @@ def _safe_target_title(profile: Profile, job: Job) -> str:
     matched.sort(key=lambda item: (-item[0], -item[1], item[2]))
     fallback = matched[0][2] if matched else "Business Operations & Transformation"
 
-    # Prefer a title drawn from the job's own wording when it's substantially
-    # grounded in the candidate's real experience/skills/competencies — it
-    # reads as far more targeted to the reviewer than a generic capability
-    # family label, and we never claim a role the candidate can't back up.
-    cleaned = _clean_job_title_for_headline(job.title or "")
-    if cleaned:
-        grounded_text = " ".join([profile.headline,
-                                   " ".join(role.get("title", "") for role in profile.experience),
-                                   " ".join(profile.flat_skills()),
-                                   " ".join(c.name for c in profile.competencies),
-                                   " ".join(f for c in profile.competencies for f in c.surface_forms)])
-        cleaned_words = _headline_words(cleaned)
-        grounded_words = _headline_words(grounded_text)
-        if cleaned_words and len(cleaned_words & grounded_words) / len(cleaned_words) >= 0.6:
-            return cleaned
+    raw = job.title or ""
+    # Strip corporate codes and normalize
+    cleaned = _clean_job_title_for_headline(raw)
+    cleaned_words = [w for w in cleaned.split() if len(w) > 2 and w.lower() not in {"and", "for", "the", "with"}]
+
+    # If the cleaned title became trivial (e.g. just "Analyst"), synthesize with the top competency domain
+    if len(cleaned_words) <= 1:
+        if "analyst" in raw.lower():
+            return f"{fallback} Analyst" if "Analyst" not in fallback else fallback
+        elif "manager" in raw.lower():
+            return f"{fallback} Manager" if "Manager" not in fallback else fallback
+        elif "lead" in raw.lower():
+            return f"{fallback} Lead" if "Lead" not in fallback else fallback
+        return fallback
+
+    # Check candidate grounding
+    grounded_text = " ".join([
+        profile.headline,
+        " ".join(role.get("title", "") for role in profile.experience),
+        " ".join(profile.flat_skills()),
+        " ".join(c.name for c in profile.competencies),
+        " ".join(f for c in profile.competencies for f in c.surface_forms)
+    ]).lower()
+    grounded_words = set(re.findall(r"[a-z]{3,}", grounded_text))
+    t_words = set(re.findall(r"[a-z]{3,}", cleaned.lower()))
+
+    overlap_ratio = len(t_words & grounded_words) / len(t_words) if t_words else 0
+    if overlap_ratio >= 0.5:
+        return cleaned
+
     return fallback
 
 
