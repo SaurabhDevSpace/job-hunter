@@ -150,7 +150,7 @@ def _from_llm(data: dict[str, Any], profile: Profile, model: str,
         # candidate into an unproven target profession.
         target_title=_safe_target_title(profile, job),
         professional_summary=summary,
-        core_competencies=_ground_truth_competencies(data.get("core_competencies"), profile),
+        core_competencies=_ground_truth_competencies(data.get("core_competencies"), profile, job),
         experience=experience,
         technical_skills={str(k): _strlist(v) for k, v in skills.items() if _strlist(v)},
         certifications=certs[:10],
@@ -245,6 +245,15 @@ _TITLE_LEVEL_WORDS = {
     "internship", "manager", "director", "head", "vp", "vice", "president",
     "chief", "officer", "1", "2", "3", "4",
 }
+# Nouns that make a title read as an actual role. If stripping level words
+# leaves none of these, the stripped title is a mangled fragment (e.g.
+# "Senior Account Manager" -> "Account") and the original wording is kept.
+_TITLE_ROLE_NOUNS = {
+    "manager", "analyst", "engineer", "specialist", "consultant", "architect",
+    "scientist", "coordinator", "supervisor", "lead", "adviser", "advisor",
+    "planner", "executive", "partner", "director", "officer",
+    "administrator", "associate", "designer", "operator",
+}
 _CORPORATE_PREFIX_RE = re.compile(
     r"\b(?:GN|S&C|MC|PRH|IE|I&E|SC&E|TGP|CTS|GDS|FY\d{2})\b|"
     r"\b(?:Industry\s*X|Digital\s*Engineering\s*R&D)\b|"
@@ -266,6 +275,10 @@ def _clean_job_title_for_headline(job_title: str) -> str:
     t = re.sub(r"\((?:[^)]*(?:remote|hybrid|india|full[- ]time|contract|req|id|tier|\d)[^)]*)\)", " ", t, flags=re.I)
     t = re.sub(r"[-–—/|]+", " ", t)
     t = re.sub(r"\s+", " ", t).strip(" -,–—|")
+    # Drop corporate domain tokens that leak in from portals ("Amazon.jobs",
+    # "Accenture.wd103.myworkdayjobs.com").
+    t = re.sub(r"\b[A-Za-z][A-Za-z0-9\-]*(?:\.[A-Za-z]{2,})+\b", " ", t)
+    t = re.sub(r"\s+", " ", t).strip(" -,–—|")
 
     # Normalize abbreviations into standard professional phrases
     t = re.sub(r"\bOps\b", "Operations", t, flags=re.I)
@@ -282,6 +295,11 @@ def _clean_job_title_for_headline(job_title: str) -> str:
     for part in parts:
         words = [w for w in re.split(r"\s+", part.strip()) if w]
         kept = [w for w in words if w.lower().strip(".,") not in _TITLE_LEVEL_WORDS]
+        # Stripping level words must not eat the role itself
+        # ("Senior Account Manager" -> "Account"): if no role noun survives,
+        # keep the original wording.
+        if kept and not any(w.lower() in _TITLE_ROLE_NOUNS for w in kept):
+            kept = list(words)
         phrase = " ".join(kept).strip(" -,")
         if not phrase:
             continue
@@ -541,10 +559,31 @@ def _default_competencies(profile: Profile) -> list[str]:
     return [c.name for c in sorted(profile.competencies, key=lambda c: -c.weight)][:10]
 
 
-def _ground_truth_competencies(value: Any, profile: Profile) -> list[str]:
-    """Retain only LLM competency labels backed by the profile."""
+def _ground_truth_competencies(value: Any, profile: Profile, job: Job | None = None) -> list[str]:
+    """Retain only LLM competency labels backed by the profile.
+
+    LLMs paraphrase labels, so a strict filter can gut the list (observed: 2 of
+    12 survive). When it does, backfill with the profile's own competencies —
+    ranked by JD relevance when a job is available, else by weight — so the
+    section matches the deterministic path's ~10-chip at-a-glance view.
+    """
     allowed = {_key(item): item for item in (_default_competencies(profile) + profile.flat_skills())}
     chosen = [allowed[_key(item)] for item in _strlist(value) if _key(item) in allowed]
+    if len(chosen) < len(_default_competencies(profile)):
+        defaults = _default_competencies(profile)
+        if job is not None:
+            try:
+                ranked = [c.name for c in _relevant_competencies(profile, job)]
+                defaults = [c for c in ranked if c in defaults] + [
+                    c for c in defaults if c not in ranked
+                ]
+            except Exception:  # pragma: no cover - ranking must never break the resume
+                pass
+        seen = {_key(item) for item in chosen}
+        for name in defaults:
+            if _key(name) not in seen:
+                chosen.append(name)
+                seen.add(_key(name))
     return (chosen or _default_competencies(profile))[:12]
 
 

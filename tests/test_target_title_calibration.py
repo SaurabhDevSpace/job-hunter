@@ -90,3 +90,27 @@ class SummaryEvidenceTests(unittest.TestCase):
         _, current = _summary_evidence(self.profile, job,
                                        ["Supply Chain & Manufacturing Operations"])
         self.assertIsNone(current)
+
+
+class TitleSanityTests(unittest.TestCase):
+    """Domain tokens must not leak and level-word stripping must not mangle roles."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.profile = load_profile()
+
+    def _target(self, title: str) -> str:
+        return _safe_target_title(self.profile, _job(title))
+
+    def test_portal_domain_is_stripped(self):
+        cleaned = _clean_job_title_for_headline(
+            "Senior Account Manager, Strategic Advisory Services - Job ID: 10521420 | Amazon.jobs")
+        self.assertNotIn("Amazon.jobs", cleaned)
+        self.assertNotIn("10521420", cleaned)
+
+    def test_level_words_do_not_eat_the_role(self):
+        title = self._target("Senior Account Manager, Strategic Advisory Services - Job ID: 10521420 | Amazon.jobs")
+        self.assertNotIn("Amazon", title)
+        self.assertNotEqual(title, "Cross-Functional Operations & Stakeholder Management")
+        self.assertIn("Account", title)
+        self.assertIn("Manager", title)
