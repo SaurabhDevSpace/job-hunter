@@ -58,3 +58,35 @@ class TargetTitleCalibrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SummaryEvidenceTests(unittest.TestCase):
+    """The current role's flagship quantified result must headline the summary."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.profile = load_profile()
+
+    def test_banking_job_summary_carries_current_role_aum_line(self):
+        from jobhunter.resume.tailor import _transferable_summary
+
+        job = _job("Banking Operations Excellence Analyst")
+        job = Job(source="manual", title=job.title, company="Example Co",
+                  url="https://example.test/job",
+                  description=("banking operations, retail banking and wealth management "
+                               "operations, process excellence, SOP, cross-functional"))
+        summary = _transferable_summary(self.profile, job, [], "fallback summary")
+        self.assertIn("150Cr", summary)
+        self.assertIn("UHNI", summary)
+
+    def test_unrelated_current_role_bullet_is_not_returned(self):
+        from jobhunter.resume.tailor import _summary_evidence
+
+        # A warehouse-ops JD with zero overlap with the current role's tags:
+        # the flagship UHNI bullet must NOT be flagged for forced inclusion.
+        job = Job(source="manual", title="Warehouse Operator", company="Example Co",
+                  url="https://example.test/job",
+                  description="Operate forklifts in cold storage; follow safety procedures and lift orders.")
+        _, current = _summary_evidence(self.profile, job,
+                                       ["Supply Chain & Manufacturing Operations"])
+        self.assertIsNone(current)

@@ -451,7 +451,13 @@ def _transferable_summary(profile: Profile, job: Job, claimable: list[str], fall
     if not capabilities:
         return fallback
 
-    evidence = _summary_evidence(profile, job, capabilities)
+    evidence, current_bullet = _summary_evidence(profile, job, capabilities)
+    # The candidate's current-role flagship result (e.g. a big-AUM portfolio line)
+    # should always headline the summary when it is JD-relevant at all; otherwise
+    # older-tenure bullets can crowd it out.
+    if current_bullet and current_bullet not in evidence:
+        evidence = [current_bullet] + evidence
+        evidence = evidence[:2]
     capability_text = ", ".join(_summary_capability_label(c) for c in capabilities)
     summary = (f"{_safe_target_title(profile, job)} professional with "
                f"{profile.years_experience}+ years of experience across {capability_text}.")
@@ -481,15 +487,23 @@ def _summary_capability_label(capability: str) -> str:
     return labels.get(capability, capability)
 
 
-def _summary_evidence(profile: Profile, job: Job, capabilities: list[str]) -> list[str]:
-    """Select the strongest JD-relevant, source-verbatim achievements for the summary."""
+def _summary_evidence(profile: Profile, job: Job, capabilities: list[str]) -> tuple[list[str], str | None]:
+    """Select the strongest JD-relevant, source-verbatim achievements for the summary.
+
+    Returns (top_bullets, current_role_bullet) where current_role_bullet is the
+    first (in profile order) bullet of the candidate's present role with genuine
+    JD overlap — the profile author's flagship for that role — so callers can
+    guarantee it a summary slot.
+    """
     target = f"{job.title} {job.department} {job.description}".lower()
     selected: list[tuple[float, str]] = []
     capability_set = set(capabilities)
+    current_best: tuple[float, str] | None = None
     for role in profile.experience:
         # Internship evidence is retained in experience, but should not displace
         # substantive career outcomes in the executive summary.
         is_internship = "intern" in str(role.get("title", "")).lower()
+        is_current = (not role.get("end")) or "present" in str(role.get("dates", "")).lower()
         for bullet in role.get("bullets", []):
             text = str(bullet.get("text", "")).strip()
             if not text:
@@ -509,9 +523,18 @@ def _summary_evidence(profile: Profile, job: Job, capabilities: list[str]) -> li
             if is_internship:
                 score -= 10.0
             selected.append((score, text))
+            # Only treat the current-role bullet as flagship-worthy when it has
+            # real JD overlap (the quantified-number bonus alone is not enough).
+            # First match in profile order wins: the author's top bullet IS the
+            # flagship, even if a later bullet scores higher on JD keywords.
+            if (current_best is None and is_current and not is_internship
+                    and (direct_overlap or relevant_tags)):
+                current_best = (score, text)
 
     selected.sort(key=lambda item: (-item[0], -len(item[1]), item[1]))
-    return [text for score, text in selected if score > 0][:2]
+    return [text for score, text in selected if score > 0][:2], (
+        current_best[1] if current_best else None
+    )
 
 
 def _default_competencies(profile: Profile) -> list[str]:
