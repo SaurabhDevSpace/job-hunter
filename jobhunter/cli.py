@@ -220,6 +220,16 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             __import__(mod)
             print(f"  {mod:<12} OK    ({why})")
         except ImportError:
+            if mod == "fastapi":
+                # The dashboard falls back to a pure-Python Starlette shim when
+                # FastAPI can't be imported (e.g. pydantic's compiled core is
+                # blocked by an endpoint-security policy).
+                try:
+                    __import__("starlette")
+                    print(f"  {mod:<12} OK    ({why}, via starlette fallback)")
+                    continue
+                except ImportError:
+                    pass
             print(f"  {mod:<12} MISSING ({why})")
 
     from .resume.pdf import backend_status

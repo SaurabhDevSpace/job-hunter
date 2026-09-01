@@ -27,6 +27,34 @@ python -m jobhunter.cli serve           # dashboard at http://127.0.0.1:8080
 > the deterministic 0–100 scorer and the offline resume tailor all run locally. The
 > LLM layer only adds deeper reasoning and richer prose.
 
+### Running on a locked-down (managed) machine
+
+Some corporate endpoint-security agents refuse to `mmap` compiled extension modules,
+so any import of a Rust/C wheel fails with `dlopen ... errno=1`. FastAPI is affected,
+because it depends on pydantic's compiled `pydantic_core`.
+
+The dashboard therefore falls back to a pure-Python **Starlette** shim
+(`jobhunter/web/_starlette_compat.py`) whenever FastAPI cannot be imported. Real
+FastAPI is still preferred and used automatically when it is available — no
+configuration needed. `doctor` reports which path is active:
+
+```
+fastapi      OK    (web dashboard, via starlette fallback)
+```
+
+Two further notes for such machines:
+
+- Use a Python interpreter the agent permits. Anything **3.10+** works; the routes use
+  `X | None` annotations, so **3.9 cannot serve the dashboard**.
+- `python-jobspy` pins `numpy==1.26.3`, whose binaries are typically blocked too. It is
+  optional — omit it and the pipeline degrades gracefully, losing only the
+  LinkedIn/Indeed/Glassdoor connectors while all other sources keep working.
+
+To get the blocks lifted rather than worked around, see [`security/`](security/) — it
+holds a ready-to-send IT/InfoSec allowlist request, the diagnostic evidence behind it,
+and `security/collect_blocked_binaries.sh`, which re-tests each binary and prints current
+SHA-256 values for the ticket.
+
 ---
 
 ## 1 · Deep internet search & hidden-job extraction

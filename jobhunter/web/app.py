@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import ssl
 import threading
 import uuid
 from pathlib import Path
@@ -12,10 +13,21 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request as UrlRequest, urlopen
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+try:  # Real FastAPI when the platform allows it.
+    from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
+    from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.templating import Jinja2Templates
+
+    _HTTP_EXC_HANDLER = None
+except ImportError:  # pragma: no cover - depends on the host's security policy
+    # FastAPI needs pydantic's compiled core, which some hardened endpoints refuse
+    # to load. Fall back to the pure-Python Starlette shim so the dashboard runs.
+    from ._starlette_compat import (
+        BackgroundTasks, FastAPI, FileResponse, HTMLResponse, HTTPException,
+        Jinja2Templates, JSONResponse, Query, Request, StaticFiles,
+        http_exception_handler as _HTTP_EXC_HANDLER,
+    )
 
 from ..config import OUTPUT_DIR, load_model_config, load_profile, load_search_matrix
 from ..db import Store
@@ -31,6 +43,8 @@ TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 STATIC_DIR = Path(__file__).parent / "static"
 
 app = FastAPI(title="Deep Job Search & Tailored Resume Portal", version="1.0.0")
+if _HTTP_EXC_HANDLER is not None:
+    app.add_exception_handler(HTTPException, _HTTP_EXC_HANDLER)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 _scheduler = None
 _custom_tailor_busy = threading.Lock()
@@ -118,12 +132,30 @@ def _clean_job_html(raw_html: str) -> tuple[str, str]:
     return title, text
 
 
+def _ssl_context() -> ssl.SSLContext | None:
+    """TLS context that works even when the interpreter has no CA bundle.
+
+    python.org builds ship without root certificates until the bundled
+    "Install Certificates.command" is run, which needs admin rights. ``requests``
+    is unaffected because it always uses ``certifi``, so fall back to the same
+    bundle here rather than failing every fetch with CERTIFICATE_VERIFY_FAILED.
+    """
+    default = ssl.get_default_verify_paths().openssl_cafile
+    if default and os.path.exists(default):
+        return None  # System store is fine; let urlopen use its default.
+    try:
+        import certifi
+    except ImportError:
+        return None
+    return ssl.create_default_context(cafile=certifi.where())
+
+
 def _fetch_job_posting(url: str) -> tuple[str, str]:
     req = UrlRequest(url, headers={"User-Agent": "Mozilla/5.0 (JobHunter)"})
     try:
-        with urlopen(req, timeout=20) as resp:
+        with urlopen(req, timeout=20, context=_ssl_context()) as resp:
             raw = resp.read(1_500_000).decode("utf-8", errors="ignore")
-    except (HTTPError, URLError, TimeoutError) as exc:
+    except (HTTPError, URLError, TimeoutError, ssl.SSLError) as exc:
         raise HTTPException(400, f"Could not fetch job URL: {exc}") from exc
     return _clean_job_html(raw)
 
@@ -167,6 +199,22 @@ def _tailor_custom(payload: dict[str, Any]) -> dict[str, Any]:
         )
 
     pipe = Pipeline()
+    if use_llm and pipe.client.enabled:
+        # Custom tailoring should finish promptly on interactive API calls even
+        # when providers are overloaded. Keep retries bounded for this endpoint
+        # only; normal daily runs keep the default reliability policy.
+        retry_cfg = pipe.client.cfg.raw.setdefault("retry", {})
+        discovery_cfg = pipe.client.cfg.raw.setdefault("discovery", {})
+        retry_cfg["timeout_seconds"] = max(
+            10, min(180, int(os.getenv("JOBHUNTER_CUSTOM_LLM_TIMEOUT_SECONDS", "35")))
+        )
+        retry_cfg["max_attempts_per_model"] = max(
+            1, min(3, int(os.getenv("JOBHUNTER_CUSTOM_LLM_ATTEMPTS_PER_MODEL", "1")))
+        )
+        discovery_cfg["chain_length"] = max(
+            1, min(5, int(os.getenv("JOBHUNTER_CUSTOM_LLM_CHAIN_LENGTH", "2")))
+        )
+
     pipe.store.upsert_jobs([job])
     pipe.store.collapse_duplicates()
     pipe._canonical = pipe.store.canonical_map([job.dedupe_key])  # noqa: SLF001
