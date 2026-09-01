@@ -128,16 +128,14 @@ experience:
     end: null
     dates: June 2025 - Present
     bullets:
-      - text: "Managed a ₹70Cr (~$7M) HNI portfolio, improving AUM, client retention, turnaround time and compliance through structured portfolio and process analysis."
+      - text: "Managed a ₹150Cr (~$18M) AUM portfolio, delivering customised investment solutions and strategic advisory to 120+ UHNI clients, enhancing client satisfaction and retention."
         tags: [Wealth / Portfolio Management & Financial Services, Business / Strategy & Operations Analytics]
-      - text: "Grew AUM by ₹11Cr (~$1M) by delivering analytics-led investment insights built on Power BI dashboards and CRM data."
+      - text: "Developed and executed a data-driven go-to-market (GTM) strategy using Power BI, identifying behavioural trends and driving 120% AUM growth within the HNI segment."
         tags: [Business / Strategy & Operations Analytics, Wealth / Portfolio Management & Financial Services]
-      - text: "Improved compliance posture and reduced turnaround time by re-engineering high-value transaction workflows and strengthening AML controls."
-        tags: [Compliance, Risk & Controls, Process Excellence & Operating Model, Workflow Automation & Digital Transformation]
-      - text: "Ran portfolio risk assessments and behavioural analytics that lifted client retention by 15%."
-        tags: [Compliance, Risk & Controls, Business / Strategy & Operations Analytics]
-      - text: "Partnered with credit, operations and compliance stakeholders to standardise client onboarding SOPs and eliminate rework."
-        tags: [Leadership & Stakeholder Communication, Process Excellence & Operating Model]
+      - text: "Redesigned the Service-to-Sales framework and mapped user journeys, resulting in a 40% increase in product penetration and long-term client engagement."
+        tags: [Process Excellence & Operating Model, Workflow Automation & Digital Transformation]
+      - text: "Facilitated cross-functional collaboration between Marketing and Sales to implement targeted acquisition strategies, achieving a 14% improvement in client conversion rates."
+        tags: [Leadership & Stakeholder Communication, Business / Strategy & Operations Analytics]
 
   - company: Bunge India Pvt Ltd
     title: Executive - Continuous Improvement / Operations
