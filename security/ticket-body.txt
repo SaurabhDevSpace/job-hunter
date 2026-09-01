@@ -1,0 +1,281 @@
+SUBJECT: Endpoint security exclusion request - Python developer toolchain, Blue Planet development workstation (macOS arm64)
+
+CATEGORY: Application Control / ThreatLocker approval request
+REQUESTER: sbrahman@ciena.com
+HOST: macOS, Apple silicon (arm64)
+WORKSPACE: ~/OneDrive - Ciena Corporation/Desktop/bp_codebases/
+BLOCKING PRODUCT: ThreatLocker, application control in default-deny mode
+                  (confirmed from AgentConfiguration.plist - see section 1.1)
+
+--------------------------------------------------------------------
+1. SUMMARY
+--------------------------------------------------------------------
+The host endpoint agent is terminating the Python interpreters used for
+Blue Planet Advisor (BPA) development on my workstation, and is refusing
+to memory-map the compiled Python extension modules those projects
+depend on. This blocks day-to-day development across the BPA Python
+repositories.
+
+Two distinct behaviours are observed:
+
+  (A) Process termination - the interpreter is SIGKILLed immediately on
+      launch. The shell reports "Killed: 9", exit code 137, with no
+      output. An agent popup names the binary.
+
+  (B) Memory-mapping denial - compiled Python extension modules (.so)
+      fail to load with:
+        dlopen(...): mmap(size=...) failed with errno=1
+      and Apple's own tooling reports:
+        lipo: can't map input file (Operation not permitted)
+
+Re-verified 2026-09-01: every interpreter listed in section 2 still
+returns exit code 137.
+
+1.1 BLOCKING PRODUCT - CONFIRMED
+The agent responsible is ThreatLocker, running application control in
+default-deny mode. Confirmed from its own configuration file on this
+host, /Library/Application Support/ThreatLocker/AgentConfiguration.plist:
+
+    "products" => {
+        "applicationControl" => true
+        "defaultDeny"        => true
+        "ringfencing"        => true
+    }
+
+System extension: com.threatlocker.app.agent (6.7.6.2022),
+team ID MSY54GN4KF, state [activated enabled].
+
+ThreatLocker has already inventoried the blocked file. Its baseline
+database (Baseline.db, table FileData) contains:
+
+    /Users/sbrahman/.local/share/uv/python/cpython-3.12.10-macos-aarch64-none/bin/python3.12
+    62D77CE55BDCEF80C23CF388998CFF228600B6849D7AA1DE7B9FDA68F0B8EFEC
+
+which is exactly the binary being killed. The file is known to the agent;
+it is simply not on the approved list.
+
+The request is therefore for a ThreatLocker application approval covering
+the developer toolchain below. Default-deny is behaving as designed - the
+toolchain needs adding to the allowlist.
+
+Other security products present on this host, none of which exhibit the
+default-deny behaviour: CyberArk EPM, CrowdStrike Falcon Sensor, Zscaler,
+Jamf.
+
+--------------------------------------------------------------------
+2. BLOCKED PATHS - PYTHON INTERPRETERS (symptom A)
+--------------------------------------------------------------------
+2.1 uv-managed interpreters
+These are provisioned by "uv", the Python package/interpreter manager
+used by the BPA Python projects. They are unmodified builds from the
+official python-build-standalone release channel.
+
+Path:   ~/.local/share/uv/python/cpython-3.12.10-macos-aarch64-none/bin/python3.12
+Ver:    CPython 3.12.10
+SHA256: 62d77ce55bdcef80c23cf388998cff228600b6849d7aa1de7b9fda68f0b8efec
+
+Path:   ~/.local/share/uv/python/cpython-3.10.17-macos-aarch64-none/bin/python3.10
+Ver:    CPython 3.10.17
+SHA256: 39cd91cd01bc2958770d73a623917ba706bd6e855dfd68f94e1a555a2637713f
+
+2.2 Conda environments for BPA projects
+Unmodified builds from Anaconda's official installer.
+
+Path:   ~/miniconda3/bin/python3.12          (base; target of .../bin/python3)
+Ver:    CPython 3.12
+SHA256: 417e7a965656c4755969ba8d855759addbe4bc0610f83c4ea51322d02c4cfef1
+
+Path:   ~/miniconda3/envs/bpa_ai_sdk_py_3_10/bin/python3.10
+Use:    Blue Planet Advisor AI SDK development environment
+SHA256: 36bfabe84b467c7191f50b7862169ae5e8f6e20ee9acbcb9f180af69d844425b
+
+Path:   ~/miniconda3/envs/gen_ai_py3_12/bin/python3.12
+Use:    Blue Planet generative-AI workstream environment
+SHA256: 97bf69cad281b7ee8d276bc2b1b9ae1e0d48f9b3566cf11d65ae335bd1691a02
+
+Path:   ~/miniconda3/envs/py313/bin/python3.13
+SHA256: 72f0cbd6ed040cb7957dc0301333bb7e23b630179758f25f327c3d9e67a2326e
+
+2.3 Concrete impact on Blue Planet repositories
+A project virtualenv contains only a SYMLINK to the real interpreter, so
+the venv appears blocked while the offending file lives elsewhere. Every
+uv-provisioned environment in the workspace therefore fails to start.
+Verified 2026-09-01 - all five return exit code 137:
+
+  BP-AGENTS/bp-knowledge-retriever-agent/.venv/bin/python  -> cpython-3.12.10 (2.1)
+  BP-AGENTS/bp-supervisor-agent/.venv/bin/python           -> cpython-3.12.10 (2.1)
+  bpa_langflow/.venv/bin/python                            -> cpython-3.12.10 (2.1)
+  bpa_ai_sdk/bpa-gen-ai/.venv/bin/python                   -> cpython-3.12.10 (2.1)
+  bpa_ai_sdk/bpa-base/.venv/bin/python                     -> cpython-3.10.17 (2.1)
+
+(paths relative to the workspace root given at the top of this ticket)
+
+None of these projects can be run or tested at present. The exclusion
+must be applied to the symlink TARGET - the two uv interpreters in
+section 2.1 - not to the venv paths above.
+
+2.4 For contrast - these interpreters are NOT blocked
+  /usr/bin/python3        3.9.6   (Apple-signed; too old for current BPA code)
+  /usr/local/bin/python3  3.14.7  (python.org)
+
+--------------------------------------------------------------------
+3. BLOCKED PATHS - DEVELOPER TOOLING (symptom A)
+--------------------------------------------------------------------
+The "ripgrep" code-search binaries bundled with the GitHub Copilot CLI
+are killed on launch, producing "ripgrep terminated by signal SIGKILL"
+errors in the editor and CLI.
+
+BLOCKED (verified 2026-09-01):
+
+~/.cache/pkg/copilot-runtime-copilot-darwin-arm64-9711ba36337fb291/copilot-darwin-arm64/ripgrep/bin/darwin-arm64/rg
+  SHA256: c8e8fb805e044b038926419d06ba09286800c5ec8cf116448b856d33bd55cca1
+
+~/.cache/pkg/copilot-runtime-copilot-darwin-arm64-55d38403543c9b25/copilot-darwin-arm64/ripgrep/bin/darwin-arm64/rg
+  SHA256: eabe1d5ad6eee013f09170e8bb0a7cd5377c4865a2ed8afe155bfd68caf58a1c
+
+NOT blocked - three further copies of ripgrep in the same cache tree run
+normally:
+  ~/.cache/pkg/28bcfffbaed35d3f102d905a51fe3685d8af504ffd7ab6b1dd243c5b9e78678b/rg
+  ~/.cache/pkg/7cfc3fe1aa9448e6119a746882e8803ed4ab4f312f387edff44c7d62d7fb37a3/rg
+  ~/.cache/pkg/fec9cb017678be7fe03358b6d5635802be657202b3daa406bb60e2c717ba4989/rg
+
+That functionally identical binaries receive different verdicts is
+itself evidence of per-file reputation scoring rather than a policy
+decision about ripgrep.
+
+--------------------------------------------------------------------
+4. BLOCKED PATHS - COMPILED PYTHON WHEELS (symptom B)
+--------------------------------------------------------------------
+Location pattern:
+  <repo>/.venv/lib/python3.X/site-packages/...
+under the workspace root:
+  ~/OneDrive - Ciena Corporation/Desktop/bp_codebases/
+
+Representative files, taken from the bp-knowledge-retriever-agent
+environment (the same modules recur in every BPA environment):
+
+  pydantic_core/_pydantic_core.cpython-312-darwin.so
+    SHA256: e7816581490beecc139cce55406632ce3d3dbdf71e4557f41549a23ba3f8ff5f
+    Impact: pydantic is a hard dependency of langflow, FastAPI and the
+            LangChain stack used across the BPA AI workstreams. When this
+            module cannot be mapped, none of those frameworks import.
+
+  lxml/etree.cpython-312-darwin.so
+    SHA256: 32f7679e697dbc320827bf77d9471ea318163dd1c2c8079d5d6dd2338c029215
+
+  websockets/speedups.cpython-312-darwin.so
+    SHA256: 393cb0dd87b31b4b72e9479a18d8b5187c270020f407f881d9a6b44c10542b44
+
+numpy is affected in the same way; it underpins the data-science and ML
+work in the BPA repositories.
+
+A live, on-demand reproducer for symptom B, currently present on this
+host and failing every time it is imported:
+
+  websockets/speedups.cpython-314-darwin.so
+    SHA256: 00c0fd47be6fef57c5f488ffd0def66745862b9cad4c77b21dde82cbdbf7bd9b
+    Error:  ImportError: dlopen(...): tried: '...'
+            (mmap(size=0xC8B0) failed with errno=1)
+
+IMPORTANT: these filenames and hashes change on every "pip install",
+"uv sync", or dependency upgrade. A per-file hash exclusion will not
+remain valid here - a directory exclusion is required. See section 6.2.
+
+--------------------------------------------------------------------
+5. WHY THIS IS AN ALLOWLIST GAP, NOT A DETECTION
+--------------------------------------------------------------------
+Under default-deny application control, the decision is made by file
+hash against an approved list - not by any judgement that a file is
+malicious. That accounts for every observation below, each of which
+looked anomalous while the cause was assumed to be malware detection:
+
+  - Copying a blocked .so to /tmp did not help. The hash is unchanged,
+    so it is still not on the list.
+  - Ad-hoc re-signing (codesign -f -s -) did not help. Re-signing does
+    not add a file to the allowlist.
+  - A trivial C extension compiled locally on this machine was also
+    refused. A brand-new binary is by definition not on the list.
+  - Three copies of ripgrep run while two do not (section 3). The
+    working copies were captured during baselining; the newer ones
+    never were.
+  - No quarantine extended attributes (xattr) are present, confirming
+    this was never macOS Gatekeeper.
+  - Other native modules load normally: uvloop, httptools,
+    markupsafe._speedups, yaml._yaml, _sqlite3, _ssl. These were
+    baselined; the blocked ones were not.
+
+All affected files are unmodified official releases (python.org /
+Anaconda / PyPI / the GitHub Copilot CLI distribution). The same
+versions run without incident on colleagues' machines and in CI. The
+SHA-256 values in this request can be checked against VirusTotal.
+
+No malicious behaviour is alleged or suspected by the agent; these files
+are simply absent from the approved application list.
+
+--------------------------------------------------------------------
+6. WHAT I AM REQUESTING
+--------------------------------------------------------------------
+Please apply all three, in increasing order of durability:
+
+  6.1 APPROVE (allowlist) every binary listed in sections 2 and 3 by
+      hash in ThreatLocker.
+
+  6.2 PATH / FOLDER approvals, so that a routine "pip install" or
+      "uv sync" does not immediately re-block under new file hashes:
+
+        ~/.local/share/uv/python/**
+        ~/miniconda3/**
+        ~/.cache/pkg/**
+        ~/OneDrive - Ciena Corporation/Desktop/bp_codebases/**/.venv/lib/python3.*/site-packages/**
+
+  6.3 A STANDARD DEVELOPER-WORKSTATION POLICY, if Ciena operates one.
+      ThreatLocker supports per-group policies, so if there is an
+      engineering computer group with the standard developer toolchain
+      already approved, moving this host into it would be preferable to
+      per-machine approvals. Sections 6.1 and 6.2 otherwise need
+      re-filing at each toolchain upgrade. If there is an approved or
+      managed Python distribution for Blue Planet development, please
+      advise and I will
+      migrate to it instead.
+
+QUESTION FOR THE REVIEWER: if Ciena publishes a standard list of
+permitted interpreter and toolchain locations for development
+workstations, please share it. I would rather conform to the approved
+layout than request exclusions for the current one.
+
+--------------------------------------------------------------------
+7. BUSINESS JUSTIFICATION
+--------------------------------------------------------------------
+Blue Planet Advisor development and testing. The affected repositories
+sit under the workspace root given at the top of this ticket and include
+BP-AGENTS (bp-knowledge-retriever-agent, bp-supervisor-agent), the BPA
+AI SDK (bpa-base, bpa-gen-ai), bpa_langflow, and the generative-AI and
+data-science workstreams. All execution is local to the workstation. The
+blocked components are standard, widely used, open-source developer
+tooling (CPython, numpy, pydantic, lxml, ripgrep).
+
+--------------------------------------------------------------------
+8. SEPARATE ITEM (different owner - not endpoint security)
+--------------------------------------------------------------------
+Docker Desktop is installed and its daemon starts, but any build or run
+is refused with:
+  "Sign in to continue using Docker Desktop. Membership in the [ciena]
+   organization is required."
+Enforced by:
+  /Library/Application Support/com.docker.docker/registry.json
+This is a Docker licensing / organisation-membership matter and should
+be routed to whoever administers the Ciena Docker Hub organisation. I
+raise it here only because it removes the obvious containerised
+workaround for the issue above.
+
+--------------------------------------------------------------------
+9. CURRENT STATUS
+--------------------------------------------------------------------
+Currently blocking. Five BPA project environments cannot start at all
+(section 2.3). Isolated work is still possible on /usr/local/bin/python3
+(3.14.7), which is not blocked, but that is not the interpreter version
+the BPA projects target and it does not resolve the wheel-mapping
+failures in section 4.
+
+Requested outcome: restore a permitted Python 3.10/3.12 toolchain so
+local development matches what the team and CI use.
