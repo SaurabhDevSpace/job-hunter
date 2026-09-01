@@ -47,7 +47,6 @@ BASE_URL = "https://integrate.api.nvidia.com/v1"
 # completion. `deepseek-v4-pro` excluded: it hangs for the full timeout
 # instead of failing fast (see module docstring).
 NVIDIA_DEFAULT_MODELS = [
-    "stepfun-ai/step-3.7-flash",
     "nvidia/nemotron-3-ultra-550b-a55b",
     "nvidia/nemotron-3-super-120b-a12b",
     "nvidia/llama-3.3-nemotron-super-49b-v1",
@@ -55,7 +54,7 @@ NVIDIA_DEFAULT_MODELS = [
     "openai/gpt-oss-20b",
 ]
 NVIDIA_DEFAULT_DAILY_CAP = 300
-RETIRED_MODELS = {"deepseek-ai/deepseek-v4-flash"}
+RETIRED_MODELS = {"deepseek-ai/deepseek-v4-flash", "stepfun-ai/step-3.7-flash"}
 PERMANENT_CLIENT_ERRORS = {400, 401, 403, 404, 410, 422}
 
 # Own ledger table so NVIDIA usage can never be confused with, or accounted
