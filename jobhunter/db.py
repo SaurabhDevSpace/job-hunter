@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -95,6 +95,25 @@ CREATE TABLE IF NOT EXISTS llm_calls (
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+_IST = timezone(timedelta(hours=5, minutes=30))  # India Standard Time for display
+
+
+def _fmt_ts(iso: str | None) -> str:
+    """Render an ISO timestamp as 'DD Mon YYYY, HH:MM IST' for display.
+
+    Returns '' when the value is missing/unparseable so the template can hide it.
+    """
+    if not iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(iso)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(_IST).strftime("%d %b %Y, %H:%M") + " IST"
+    except (ValueError, TypeError):
+        return ""
 
 
 class Store:
@@ -312,7 +331,10 @@ class Store:
                 rows = c.execute("SELECT a.*, j.title, j.company FROM artifacts a "
                                  "LEFT JOIN jobs j USING(job_id) ORDER BY a.id DESC LIMIT ?",
                                  (limit,)).fetchall()
-        return [dict(r) for r in rows]
+        out = [dict(r) for r in rows]
+        for a in out:
+            a["created_at_disp"] = _fmt_ts(a.get("created_at"))
+        return out
 
     # ------------------------------------------------------------------ runs
     def start_run(self) -> int:

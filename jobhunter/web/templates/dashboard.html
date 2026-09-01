@@ -306,6 +306,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
           <a href="/download?path={{ a.path | urlencode }}" download>⬇ {{ a.kind }}</a>
           <span class="muted">— {{ (a.company or '')[:20] }} / {{ (a.title or '')[:34] }}</span>
           {% if a.ats_score %}<span class="chip">ATS {{ a.ats_score }}%</span>{% endif %}
+          {% if a.created_at_disp %}<span class="muted mono" style="margin-left:auto">🕒 {{ a.created_at_disp }}</span>{% endif %}
         </div>
       {% else %}<div class="muted small">none yet</div>{% endfor %}
     </div>
