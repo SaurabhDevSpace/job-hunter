@@ -114,3 +114,27 @@ class TitleSanityTests(unittest.TestCase):
         self.assertNotEqual(title, "Cross-Functional Operations & Stakeholder Management")
         self.assertIn("Account", title)
         self.assertIn("Manager", title)
+
+
+class CompetencyChipFloorTests(unittest.TestCase):
+    """Core competencies: best JD-match first, never below 5 chips."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.profile = load_profile()
+
+    def test_paraphrased_llm_labels_floor_at_five_best_match_first(self):
+        from jobhunter.resume.tailor import _ground_truth_competencies, _jd_matched_competency_names
+
+        job = Job(source="manual", title="Operations Transformation Manager", company="Example Co",
+                  url="https://example.test/job",
+                  description=("process excellence, operating model transformation, continuous "
+                               "improvement, cross-functional stakeholder management, data analytics"))
+        out = _ground_truth_competencies(["Client Relationship Mgmt", "Paraphrased Label X"],
+                                         self.profile, job)
+        self.assertGreaterEqual(len(out), 5)
+        names = {c.name for c in self.profile.competencies}
+        self.assertGreaterEqual(len([c for c in out if c in names]), 3)
+        matched = _jd_matched_competency_names(self.profile, job)
+        if matched:
+            self.assertEqual(out[0], matched[0])

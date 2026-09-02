@@ -207,7 +207,11 @@ def deterministic_tailor(job: Job, profile: Profile, ats_keywords: list[str]) ->
         focus = ", ".join(phrases[:3])
         summary = f"{summary} Directly aligned to this role through {focus}."
 
-    comps = _default_competencies(profile)
+    # Best-match competencies first; weight-ordered fill only so the section
+    # never looks empty (5-chip floor).
+    comps = _jd_matched_competency_names(profile, job)[:12]
+    if len(comps) < 5:
+        comps += [c for c in _default_competencies(profile) if c not in comps]
     extra = [k.title() for k in claimable if not any(k in c.lower() for c in comps)]
     comps = (comps + extra)[:12]
 
@@ -559,28 +563,36 @@ def _default_competencies(profile: Profile) -> list[str]:
     return [c.name for c in sorted(profile.competencies, key=lambda c: -c.weight)][:10]
 
 
+def _jd_matched_competency_names(profile: Profile, job: Job | None) -> list[str]:
+    """Profile competency names that overlap with the target JD, best match first."""
+    if job is None:
+        return []
+    target = f"{job.title} {job.department} {job.description}".lower()
+    ranked = []
+    for comp in profile.competencies:
+        overlap = sum(form in target for form in comp.surface_forms if len(form) > 3)
+        if overlap:
+            ranked.append((overlap, comp.weight, comp.name))
+    ranked.sort(key=lambda item: (-item[0], -item[1], item[2]))
+    return [name for _, _, name in ranked]
+
+
 def _ground_truth_competencies(value: Any, profile: Profile, job: Job | None = None) -> list[str]:
     """Retain only LLM competency labels backed by the profile.
 
-    LLMs paraphrase labels, so a strict filter can gut the list (observed: 2 of
-    12 survive). When it does, backfill with the profile's own competencies —
-    ranked by JD relevance when a job is available, else by weight — so the
-    section matches the deterministic path's ~10-chip at-a-glance view.
+    Best-match-first: JD-overlapping competencies lead, and the list is only
+    backfilled up to a 5-chip floor (JD matches first, then weight order) so a
+    paraphrased LLM response can no longer shrink the section to two chips.
     """
     allowed = {_key(item): item for item in (_default_competencies(profile) + profile.flat_skills())}
     chosen = [allowed[_key(item)] for item in _strlist(value) if _key(item) in allowed]
-    if len(chosen) < len(_default_competencies(profile)):
-        defaults = _default_competencies(profile)
-        if job is not None:
-            try:
-                ranked = [c.name for c in _relevant_competencies(profile, job)]
-                defaults = [c for c in ranked if c in defaults] + [
-                    c for c in defaults if c not in ranked
-                ]
-            except Exception:  # pragma: no cover - ranking must never break the resume
-                pass
+    if len(chosen) < 5:
+        backfill = _jd_matched_competency_names(profile, job)
+        backfill += [n for n in _default_competencies(profile) if n not in backfill]
         seen = {_key(item) for item in chosen}
-        for name in defaults:
+        for name in backfill:
+            if len(chosen) >= 5:
+                break
             if _key(name) not in seen:
                 chosen.append(name)
                 seen.add(_key(name))
