@@ -55,6 +55,21 @@ class TargetTitleCalibrationTests(unittest.TestCase):
         cleaned = _clean_job_title_for_headline("Banking Ops Excellence Analyst")
         self.assertEqual(cleaned, "Banking Operations Excellence Analyst")
 
+    def test_global_operations_manager_is_inspired_not_copied(self):
+        title = self._target("Manager, Provider Global Operations - Remote")
+        self.assertNotIn("Provider", title)
+        self.assertNotIn("Remote", title)
+        self.assertNotEqual(title, "Manager, Provider Global Operations - Remote")
+        self.assertIn("Global Operations", title)
+        self.assertIn("Manager", title)
+
+    def test_strategy_consulting_apac_is_inspired_not_copied(self):
+        title = self._target("Senior Associate, Strategy Consulting APAC")
+        self.assertNotIn("APAC", title)
+        self.assertNotEqual(title, "Senior Associate, Strategy Consulting APAC")
+        self.assertIn("Strategy", title)
+        self.assertIn("Consultant", title)
+
 
 if __name__ == "__main__":
     unittest.main()

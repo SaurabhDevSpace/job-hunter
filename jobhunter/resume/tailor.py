@@ -326,7 +326,68 @@ def _clean_job_title_for_headline(job_title: str) -> str:
 
 
 def _safe_target_title(profile: Profile, job: Job) -> str:
-    """Synthesize a calibrated target title that bridges candidate grounding with target JD requirements."""
+    """Synthesize a calibrated target title that bridges candidate grounding with target JD requirements.
+
+    The title is inspired by the target job domain and level, but anchored in the
+    candidate's proven original roles and competencies — never a verbatim copy
+    of the employer's requisition title.
+    """
+    raw = job.title or ""
+    cleaned = _clean_job_title_for_headline(raw)
+    # Strip regional/geographic scope tokens (APAC, EMEA, etc.)
+    cleaned = re.sub(r"\b(?:APAC|EMEA|LATAM|AMER|ANZ|NA|US|USA|UK|India)\b", " ", cleaned, flags=re.I)
+    cleaned = re.sub(r"[-–—/|,]+", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+    c_lower = f"{cleaned} {job.department}".lower()
+
+    # Detect level from target title
+    level = "Manager"
+    if "analyst" in c_lower:
+        level = "Analyst"
+    elif "manager" in c_lower or "director" in c_lower or "head" in c_lower:
+        level = "Manager"
+    elif "consultant" in c_lower or "associate" in c_lower:
+        level = "Consultant" if ("consult" in c_lower or "strategy" in c_lower) else "Specialist"
+    elif "lead" in c_lower:
+        level = "Lead"
+    elif "specialist" in c_lower:
+        level = "Specialist"
+    elif "advisor" in c_lower:
+        level = "Advisor"
+
+    # Match target domain and synthesize with candidate's proven anchor
+    if "strategy" in c_lower or "strategic" in c_lower or "consult" in c_lower:
+        if "advisory" in c_lower or "account" in c_lower:
+            return f"Strategic Account Management & Client Operations {level}"
+        return f"Operations Strategy & Business Transformation {level}"
+
+    if "banking" in c_lower or "wealth" in c_lower or "financial" in c_lower:
+        if "excellence" in c_lower or "ops" in c_lower or "operation" in c_lower:
+            return f"Banking Operations & Process Excellence {level}"
+        return f"Private Banking & Client Operations {level}"
+
+    if "global" in c_lower and ("operation" in c_lower or "ops" in c_lower):
+        return f"Global Operations & Process Excellence {level}"
+
+    if "process excellence" in c_lower or "operational excellence" in c_lower:
+        return f"Process Excellence & Operations Transformation {level}"
+
+    if "transformation" in c_lower or "continuous improvement" in c_lower or "lean" in c_lower:
+        return f"Operations Transformation & Continuous Improvement {level}"
+
+    if "supply chain" in c_lower or "logistics" in c_lower:
+        return f"Supply Chain Operations & Continuous Improvement {level}"
+
+    if "procurement" in c_lower or "sourcing" in c_lower or "spend" in c_lower:
+        return f"Strategic Sourcing & Procurement {level}"
+
+    if "operation" in c_lower or "ops" in c_lower:
+        return f"Operations & Process Excellence {level}"
+
+    if "account" in c_lower:
+        return f"Strategic Account Management & Client Operations {level}"
+
     labels = {
         "Strategic Sourcing & Procurement": "Strategic Sourcing & Procurement",
         "Spend Analytics & Cost Optimization": "Spend Analytics & Cost Optimization",
@@ -349,41 +410,8 @@ def _safe_target_title(profile: Profile, job: Job) -> str:
     ]
     matched = [item for item in matched if item[0] > 0]
     matched.sort(key=lambda item: (-item[0], -item[1], item[2]))
-    fallback = matched[0][2] if matched else "Business Operations & Transformation"
-
-    raw = job.title or ""
-    # Strip corporate codes and normalize
-    cleaned = _clean_job_title_for_headline(raw)
-    cleaned_words = [w for w in cleaned.split() if len(w) > 2 and w.lower() not in {"and", "for", "the", "with"}]
-
-    # If the cleaned title became trivial (e.g. just "Analyst"), synthesize with the top competency domain
-    if len(cleaned_words) <= 1:
-        if "analyst" in raw.lower():
-            return f"{fallback} Analyst" if "Analyst" not in fallback else fallback
-        elif "manager" in raw.lower():
-            return f"{fallback} Manager" if "Manager" not in fallback else fallback
-        elif "lead" in raw.lower():
-            return f"{fallback} Lead" if "Lead" not in fallback else fallback
-        return fallback
-
-    # Check candidate grounding
-    grounded_text = " ".join([
-        profile.headline,
-        profile.summary,
-        " ".join(role.get("title", "") for role in profile.experience),
-        " ".join(b.get("text", "") for role in profile.experience for b in role.get("bullets", [])),
-        " ".join(profile.flat_skills()),
-        " ".join(c.name for c in profile.competencies),
-        " ".join(f for c in profile.competencies for f in c.surface_forms)
-    ]).lower()
-    grounded_words = set(re.findall(r"[a-z]{3,}", grounded_text))
-    t_words = set(re.findall(r"[a-z]{3,}", cleaned.lower()))
-
-    overlap_ratio = len(t_words & grounded_words) / len(t_words) if t_words else 0
-    if overlap_ratio >= 0.5:
-        return cleaned
-
-    return fallback
+    fallback = matched[0][2] if matched else "Operations Transformation & Business Excellence"
+    return f"{fallback} {level}" if level not in fallback else fallback
 
 
 def _relevant_competencies(profile: Profile, job: Job) -> list[Any]:
