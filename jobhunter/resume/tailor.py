@@ -277,6 +277,8 @@ def _clean_job_title_for_headline(job_title: str) -> str:
     t = _CORPORATE_PREFIX_RE.sub(" ", raw)
     t = re.sub(r"\[[^\]]*\]", " ", t)
     t = re.sub(r"\((?:[^)]*(?:remote|hybrid|india|full[- ]time|contract|req|id|tier|\d)[^)]*)\)", " ", t, flags=re.I)
+    t = re.sub(r"[-–—/|]+\s*(?:remote|hybrid|onsite|on-site)\b", " ", t, flags=re.I)
+    t = re.sub(r"\b(?:remote|hybrid|onsite|on-site)\b", " ", t, flags=re.I)
     t = re.sub(r"[-–—/|]+", " ", t)
     t = re.sub(r"\s+", " ", t).strip(" -,–—|")
     # Drop corporate domain tokens that leak in from portals ("Amazon.jobs",
@@ -367,7 +369,9 @@ def _safe_target_title(profile: Profile, job: Job) -> str:
     # Check candidate grounding
     grounded_text = " ".join([
         profile.headline,
+        profile.summary,
         " ".join(role.get("title", "") for role in profile.experience),
+        " ".join(b.get("text", "") for role in profile.experience for b in role.get("bullets", [])),
         " ".join(profile.flat_skills()),
         " ".join(c.name for c in profile.competencies),
         " ".join(f for c in profile.competencies for f in c.surface_forms)

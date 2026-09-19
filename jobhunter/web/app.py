@@ -1,6 +1,8 @@
 """FastAPI dashboard + REST API for the deep job search engine."""
 from __future__ import annotations
 
+import html
+import json
 import logging
 import os
 import re
@@ -122,14 +124,49 @@ def _india_permissible_jobs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def _clean_job_html(raw_html: str) -> tuple[str, str]:
+def _clean_job_html(raw_html: str) -> tuple[str, str, str, str]:
+    """Extract job details (title, description, company, location) from HTML or JSON-LD."""
+    # 1. Look for Schema.org JobPosting in JSON-LD (Workday, Greenhouse, Lever, etc.)
+    for block in re.findall(r'<script[^>]*type=[\'"]application/ld\+json[\'"][^>]*>(.*?)</script>', raw_html, re.I | re.S):
+        try:
+            data = json.loads(block.strip())
+            items = data if isinstance(data, list) else data.get("@graph", [data])
+            for item in items:
+                if isinstance(item, dict) and (item.get("@type") == "JobPosting" or ("description" in item and "title" in item)):
+                    t = html.unescape(str(item.get("title") or "")).strip()
+                    desc_raw = str(item.get("description") or "")
+                    desc_clean = re.sub(r"(?is)<(script|style).*?>.*?</\1>", " ", desc_raw)
+                    desc_clean = re.sub(r"(?s)<[^>]+>", " ", desc_clean)
+                    desc_clean = html.unescape(desc_clean)
+                    desc_clean = re.sub(r"\s+", " ", desc_clean).strip()
+
+                    comp = ""
+                    hiring_org = item.get("hiringOrganization")
+                    if isinstance(hiring_org, dict):
+                        comp = html.unescape(str(hiring_org.get("name") or "")).strip()
+                    elif isinstance(hiring_org, str):
+                        comp = html.unescape(hiring_org).strip()
+
+                    loc = ""
+                    job_loc = item.get("jobLocation")
+                    if isinstance(job_loc, dict):
+                        addr = job_loc.get("address")
+                        if isinstance(addr, dict):
+                            parts = [addr.get("addressLocality"), addr.get("addressRegion"), addr.get("addressCountry")]
+                            loc = ", ".join(p for p in parts if p)
+                    if t and desc_clean:
+                        return t, desc_clean, comp, loc
+        except Exception:
+            continue
+
+    # 2. Fallback to standard HTML parsing
     title_match = re.search(r"<title[^>]*>(.*?)</title>", raw_html, flags=re.I | re.S)
-    title = re.sub(r"\s+", " ", (title_match.group(1) if title_match else "")).strip()
-    text = re.sub(r"(?is)<(script|style).*?>.*?</\\1>", " ", raw_html)
+    title = html.unescape(re.sub(r"\s+", " ", (title_match.group(1) if title_match else "")).strip())
+    text = re.sub(r"(?is)<(script|style).*?>.*?</\1>", " ", raw_html)
     text = re.sub(r"(?s)<[^>]+>", " ", text)
-    text = text.replace("&nbsp;", " ").replace("&amp;", "&")
+    text = html.unescape(text)
     text = re.sub(r"\s+", " ", text).strip()
-    return title, text
+    return title, text, "", ""
 
 
 def _ssl_context() -> ssl.SSLContext | None:
@@ -150,7 +187,7 @@ def _ssl_context() -> ssl.SSLContext | None:
     return ssl.create_default_context(cafile=certifi.where())
 
 
-def _fetch_job_posting(url: str) -> tuple[str, str]:
+def _fetch_job_posting(url: str) -> tuple[str, str, str, str]:
     req = UrlRequest(url, headers={"User-Agent": "Mozilla/5.0 (JobHunter)"})
     try:
         with urlopen(req, timeout=20, context=_ssl_context()) as resp:
@@ -175,13 +212,20 @@ def _tailor_custom(payload: dict[str, Any]) -> dict[str, Any]:
     job_url = str(payload.get("job_url", "") or "").strip()
     desc = str(payload.get("job_description", "") or "").strip()
     title = str(payload.get("title", "") or "").strip()
-    company = str(payload.get("company", "") or "").strip() or "Target Company"
+    company = str(payload.get("company", "") or "").strip()
     location = str(payload.get("location", "") or "").strip()
     use_llm = bool(payload.get("use_llm", True))
+    force = bool(payload.get("force", True))  # Default True for user-initiated custom tailoring
 
     fetched_title = ""
     if not desc and job_url:
-        fetched_title, desc = _fetch_job_posting(job_url)
+        fetched_title, desc, fetched_comp, fetched_loc = _fetch_job_posting(job_url)
+        if not company:
+            company = fetched_comp
+        if not location:
+            location = fetched_loc
+    if not company:
+        company = "Target Company"
     if not desc or len(desc) < 80:
         raise HTTPException(400, "Provide a job URL or paste a fuller job description.")
 
@@ -192,10 +236,10 @@ def _tailor_custom(payload: dict[str, Any]) -> dict[str, Any]:
 
     from ..geo import eligible
     verdict, countries = eligible(job.location, job.description)
-    if verdict != "eligible":
+    if verdict != "eligible" and not force:
         raise HTTPException(
             400,
-            f"Role is not India-permissible for remote/hybrid hiring (detected: {countries or ['unknown']}).",
+            f"Role is not India-permissible for remote/hybrid hiring (detected: {countries or ['unknown']}). Pass force=true to proceed.",
         )
 
     pipe = Pipeline()
