@@ -1,28 +1,31 @@
 # =============================================================================
 # CANDIDATE GROUND-TRUTH PROFILE  (single source of truth)
-# Derived from "Ashwini CV (Latest).docx" + "Ashwini IIMUdaipur College (Resume).docx"
+# Derived from the source CVs and candidate-confirmed updates (27 September 2026).
 # Every bullet below is factual. The resume generator may RE-ORDER and RE-PHRASE
 # these facts for a given JD, but must never invent new ones.
 # =============================================================================
 
 name: Ashwini H. Pathode
-headline: Operations Transformation, Continuous Improvement & Strategic Procurement Professional
+headline: Strategy, Operations & Analytics
 current_title: Private Banking Manager, ICICI Bank
-location: India
+location: Mumbai, Maharashtra, India
 email: pathodeashwini1306@gmail.com   # <-- replace with real email
 phone: "+91-9075316335"               # <-- replace with real phone
-linkedin: ""                          # <-- optional
+linkedin: "https://www.linkedin.com/in/ashwini-pathode2006/"                          # <-- optional
 years_experience: 4
 
+# USD equivalents: 1 USD = 95.82 INR, reference date 2026-09-25.
+# Source: https://api.frankfurter.dev/v1/2026-09-25?base=USD&symbols=INR
+# Display rounded to whole USD millions, or one decimal below USD 1M, as requested.
 summary: >-
-  Procurement & Operations Transformation professional with 4+ years of experience delivering
-  cost optimization and spend efficiency across direct and indirect categories. Proven track
-  record of ₹2Cr+ annualised savings through sourcing analytics, process redesign, Lean
-  deployment and SAP-enabled controls. Experienced in KPI-led procurement diagnostics,
-  operating model improvement, compliance alignment and cross-functional stakeholder
-  management. Wealth & private banking experience with a ₹150Cr AUM portfolio for 120+
-  UHNI clients. MBA (IIM Udaipur) with exposure to digital procurement, Industry 4.0
-  and GenAI-led transformation.
+  Operations Strategy & Business Transformation Professional with 4+ years of experience
+  delivering cost optimisation, process excellence and supply chain efficiency across direct
+  and indirect categories. Managed a ₹150Cr (~$16M USD) AUM portfolio for 120+ UHNI clients,
+  using Power BI and CRM analytics to drive business growth. MBA from IIM Udaipur and
+  B.Tech in Chemical Technology. Delivered ₹10Cr (~$1M USD) annualised cost savings through spend
+  analytics, operating model improvement, process redesign, Lean deployment and SAP-enabled
+  controls. Combines cross-functional stakeholder management and KPI digitisation with
+  Industry 4.0 project experience and GenAI transformation strategy.
 
 # ---------------------------------------------------------------------------
 # COMPETENCY GRAPH — used by the deterministic scorer.
@@ -130,7 +133,7 @@ experience:
     end: null
     dates: June 2025 - Present
     bullets:
-      - text: "Managed a ₹150Cr (~$18M) AUM portfolio, delivering customised investment solutions and strategic advisory to 120+ UHNI clients, enhancing client satisfaction and retention."
+      - text: "Managed a ₹150Cr (~$16M USD) AUM portfolio, delivering customised investment solutions and strategic advisory to 120+ UHNI clients, enhancing client satisfaction and retention."
         tags: [Wealth / Portfolio Management & Financial Services, Business / Strategy & Operations Analytics]
       - text: "Developed and executed a data-driven go-to-market (GTM) strategy using Power BI, identifying behavioural trends and driving 120% AUM growth within the HNI segment."
         tags: [Business / Strategy & Operations Analytics, Wealth / Portfolio Management & Financial Services]
@@ -150,18 +153,14 @@ experience:
     end: 2022-06
     dates: July 2019 - June 2022
     bullets:
-      - text: "Delivered ₹2Cr (~$200K) annualised cost savings across direct spend (raw materials, utilities) and indirect spend (maintenance, manpower, consumables) via structured cost diagnostics and sourcing efficiency initiatives."
+      - text: "Delivered ₹10Cr (~$1M USD) annualised cost savings across direct spend (raw materials, utilities) and indirect spend (maintenance, manpower, consumables) via structured cost diagnostics and sourcing efficiency initiatives."
         tags: [Spend Analytics & Cost Optimization, Strategic Sourcing & Procurement]
-      - text: "Achieved ₹80L (~$80K) annual savings through a plant-wide time-and-motion study, converting findings into FTE optimisation and line-balancing actions."
+      - text: "Achieved ₹80L (~$0.1M USD) annual savings through a plant-wide time-and-motion study, converting findings into FTE optimisation and line-balancing actions."
         tags: [Spend Analytics & Cost Optimization, Continuous Improvement & Lean Six Sigma]
-      - text: "Generated ₹70L+ (~$70K+, p.a. run-rate) incremental revenue through targeted process optimisation projects aligned to cross-functional business priorities."
-        tags: [Process Excellence & Operating Model, Continuous Improvement & Lean Six Sigma]
       - text: "Designed plant-level procurement KPIs (Cost per MT, Labour Productivity, Maintenance Spend %) aligned with finance and procurement governance."
         tags: [Strategic Sourcing & Procurement, Business / Strategy & Operations Analytics]
       - text: "Deployed Lean and 5S across the shop floor and instituted a cross-functional Kaizen policy spanning 8+ departments, improving OEE, productivity and workplace discipline."
         tags: [Continuous Improvement & Lean Six Sigma, Leadership & Stakeholder Communication]
-      - text: "Drove the Bunge Productivity System across nine pillars (Safety, Quality, CI, Asset Care, Sustainability), embedding best practice through standardised SOPs."
-        tags: [Continuous Improvement & Lean Six Sigma, Process Excellence & Operating Model, Supply Chain & Manufacturing Operations]
       - text: "Built the asset-management framework for a greenfield plant: 293+ asset additions, preventive-maintenance task lists and manpower planning executed in SAP, raising equipment reliability."
         tags: [SAP & Enterprise Systems, Supply Chain & Manufacturing Operations]
       - text: "Collaborated with global teams (Bunge Barcelona, Spain) on KPI digitisation and an Industry 4.0 asset framework, enabling real-time visibility via SAP and Power BI."
@@ -199,8 +198,8 @@ skills:
 
 certifications:
   - Lean Six Sigma Green Belt
-  - SAP Certified Associate
-  - NISM - Portfolio Management
+  - SAP Certified Associate (MM/PM)
+  - NISM - Portfolio Management Services (PMS)
   - Power BI & Tableau - Visualization and Data Analytics
   - Project Management - Scrum Master & Agile (Jira)
   - AI / GenAI Business Strategy
