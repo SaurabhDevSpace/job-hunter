@@ -75,11 +75,44 @@ TITLE_DISQUALIFY = re.compile(
     r"attorney|lawyer|paralegal|social media|influencer|dentist|pharmacist|veterinar\w+)\b", re.I)
 
 
-def classify_title(title: str) -> tuple[str, float]:
+def classify_title(title: str, profile: Profile | None = None) -> tuple[str, float]:
     """Return (family, title_fit_points out of 18)."""
     t = title or ""
-    if TITLE_DISQUALIFY.search(t):
+
+    is_legal_or_cs = False
+    if profile:
+        profile_text = f"{profile.name} {profile.headline} {' '.join(c.name for c in profile.competencies)}".lower()
+        if any(k in profile_text for k in ["secretar", "company secretary", "governance", "compliance", "law", "ll.b"]):
+            is_legal_or_cs = True
+
+    disqualify_pat = TITLE_DISQUALIFY
+    if is_legal_or_cs:
+        # Don't disqualify legal or secretarial roles for legal/CS candidates
+        disqualify_pat = re.compile(
+            r"\b(software|developer|programmer|frontend|front-end|backend|back-end|full[- ]stack|"
+            r"devops|sre|site reliability|platform engineer|security engineer|network engineer|"
+            r"mechanical engineer|electrical engineer|civil engineer|chemical engineer|"
+            r"engineering manager|solutions architect|data engineer|data scientist|"
+            r"machine learning|ml engineer|ai engineer|qa engineer|test engineer|"
+            r"ux|ui designer|graphic designer|copywriter|content writer|journalist|editor|"
+            r"account executive|sales representative|sales development|sdr|bdr|"
+            r"recruiter|talent acquisition|nurse|physician|therapist|teacher|tutor|professor|"
+            r"driver|technician|electrician|welder|chef|barista|cashier|security guard|"
+            r"social media|influencer|dentist|pharmacist|veterinar\w+)\b", re.I)
+
+    if disqualify_pat.search(t):
         return "off-target", 0.0
+
+    if is_legal_or_cs:
+        if re.search(r"\b(company secretary|secretarial|corporate governance|statutory compliance|"
+                     r"board governance|entity management|compliance officer|sebi|regulatory compliance|"
+                     r"secretarial officer|secretarial analyst|governance manager|corporate secretar\w+|"
+                     r"legal entity|assistant company secretary|associate company secretary)\b", t, re.I):
+            return "core", 18.0
+        if re.search(r"\b(compliance|legal|regulatory|paralegal|law|contract\w*|due diligence|"
+                     r"corporate affairs|governance|statutory)\b", t, re.I):
+            return "adjacent", 10.5
+
     if TITLE_CORE.search(t):
         return "core", 18.0
     if TITLE_ADJACENT.search(t):
@@ -183,7 +216,7 @@ def deterministic_score(job: Job, profile: Profile) -> JobScore:
             # saturating credit: 1 hit = 60% of weight, 4+ hits = full weight
             hit_weight += comp.weight * min(1.0, 0.60 + 0.14 * (hits - 1))
 
-    title_family, title_fit = classify_title(job.title)
+    title_family, title_fit = classify_title(job.title, profile)
     # A JD exercises only part of a profile, but demanding 75% of the weighted
     # competency mass keeps the body component genuinely discriminating.
     coverage = min(1.0, (hit_weight / total_weight) / 0.75)
@@ -210,7 +243,11 @@ def deterministic_score(job: Job, profile: Profile) -> JobScore:
 
     # -- 3. REMOTE FLEXIBILITY (15) -----------------------------------------
     mode = job.work_mode
-    remote = {"remote": 1.0, "hybrid": 0.85, "unknown": 0.40, "onsite": 0.10}.get(mode, 0.4)
+    allowed_modes = set(prefs.get("work_modes", ["remote", "hybrid"]))
+    if "onsite" in allowed_modes and mode == "onsite":
+        remote = 0.85
+    else:
+        remote = {"remote": 1.0, "hybrid": 0.85, "unknown": 0.40, "onsite": 0.10}.get(mode, 0.4)
     loc_low = _lower(job.location)
     if any(_lower(l) in loc_low for l in prefs.get("locations", [])):
         remote = min(1.0, remote + 0.12)
@@ -234,6 +271,13 @@ def deterministic_score(job: Job, profile: Profile) -> JobScore:
                        "aum", "fp&a", "cost accounting"],
         "compliance": ["compliance", "aml", "kyc", "audit", "iso", "governance", "controls"],
     }
+    if any(k in f"{profile.name} {profile.headline}".lower() for k in ["secretar", "company secretary", "governance", "compliance"]):
+        domain_families.update({
+            "secretarial": ["company secretary", "secretarial", "minutes", "board meeting", "shareholders", "agm", "egm"],
+            "statutory": ["statutory", "mca", "roc", "annual return", "filings", "companies act", "share allotment"],
+            "governance": ["corporate governance", "diligent", "entity management", "directors", "board", "lodr"],
+            "regulatory": ["sebi", "rbi", "fema", "fatca", "crs", "kyc", "due diligence"],
+        })
     domain_hits = sum(1 for terms in domain_families.values() if any(t in low for t in terms))
     domain = WEIGHTS["domain"] * min(1.0, domain_hits / 4.0)
 

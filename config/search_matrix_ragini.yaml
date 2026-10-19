@@ -22,13 +22,17 @@ target_roles:
 keyword_seeds:
   - company secretary
   - corporate secretarial
+  - secretarial
   - board governance
   - entity management
-  - sebi lodr
   - statutory compliance
-  - mca filing
   - corporate governance
+  - compliance officer
+  - regulatory compliance
+  - secretarial officer
   - diligent
+  - sebi lodr
+  - mca filing
   - share transfer
   - minutes drafting
 
@@ -44,3 +48,97 @@ locations:
   - Delhi NCR, India
   - India
   - Remote
+
+# JobSpy (Indeed India - fast and reliable)
+jobspy:
+  enabled: true
+  sites: [indeed]
+  max_terms: 5
+  results_wanted: 30
+  hours_old: 168
+  country_indeed: India
+  is_remote: false
+  locations:
+    - "India"
+    - "Mumbai, India"
+    - "Bangalore, India"
+
+# ATS portals (Company-owned career portals: Greenhouse, Lever, Ashby, Workday, SmartRecruiters)
+ats:
+  greenhouse:
+    - stripe
+    - databricks
+    - airtable
+    - gitlab
+    - flexport
+    - instacart
+    - samsara
+    - sigmacomputing
+    - cockroachlabs
+    - grafanalabs
+    - zscaler
+    - twilio
+    - mongodb
+    - checkr
+    - canonical
+    - elastic
+    - remote
+    - postman
+    - mozilla
+    - dropbox
+    - turing
+    - customerio
+    - wikimedia
+    - bitwarden
+    - builtin
+  lever:
+    - spotify
+    - mistplay
+    - toptal
+    - angellist
+  ashby:
+    - openai
+    - ramp
+    - linear
+    - notion
+    - vanta
+    - supabase
+    - camunda
+    - redis
+    - revenuecat
+    - andela
+    - zapier
+    - posthog
+    - helpscout
+    - close
+    - atlan
+    - kit
+    - buffer
+  smartrecruiters:
+    - freshworks
+    - whatfix
+  workable:
+    - trailofbits
+  recruitee:
+    - mailerlite
+  workday:
+    - name: Accenture
+      host: https://accenture.wd103.myworkdayjobs.com
+      tenant: accenture
+      site: AccentureCareers
+    - name: Deloitte India
+      host: https://deloitteus.wd1.myworkdayjobs.com
+      tenant: deloitteus
+      site: Deloitte_US_External_Careers
+    - name: Salesforce
+      host: https://salesforce.wd12.myworkdayjobs.com
+      tenant: salesforce
+      site: External_Career_Site
+    - name: Nvidia
+      host: https://nvidia.wd5.myworkdayjobs.com
+      tenant: nvidia
+      site: NVIDIAExternalCareerSite
+    - name: Dell
+      host: https://dell.wd1.myworkdayjobs.com
+      tenant: dell
+      site: External
