@@ -220,4 +220,6 @@ preferences:
   locations: [India, Global Remote, Remote - India, Bangalore, Mumbai, Pune, Delhi NCR,
               Gurgaon, Hyderabad, Chennai, Udaipur, Nagpur]
   exclude_keywords: [unpaid, commission only, door to door, field sales, insurance agent,
-                     us citizens only, security clearance, must be located in]
+                     us citizens only, security clearance, must be located in,
+                     software developer, software engineer, shopify developer,
+                     coding tasks, full stack, devops, backend, frontend]

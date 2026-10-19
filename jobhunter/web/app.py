@@ -114,8 +114,14 @@ def _downloads(files: dict[str, Any]) -> list[dict[str, str]]:
 
 def _india_permissible_jobs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     from ..geo import eligible
+    from ..scoring import classify_title
+    profile = load_profile()
     out: list[dict[str, Any]] = []
     for row in rows:
+        title = str(row.get("title", "") or "")
+        family, _ = classify_title(title, profile)
+        if family == "off-target":
+            continue
         # Custom-tailor jobs are validated at ingestion; keep them visible in Matches.
         if str(row.get("source", "")) == CUSTOM_TAILOR_SOURCE:
             out.append(row)

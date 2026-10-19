@@ -119,14 +119,19 @@ class Pipeline:
         return list(best.values())
 
     def prefilter(self, jobs: list[Job]) -> list[Job]:
-        """Drop obvious non-fits before any LLM spend — including geo-ineligible roles."""
+        """Drop obvious non-fits before any LLM spend — including geo-ineligible roles and off-target titles."""
         from jobhunter.geo import eligible
+        from jobhunter.scoring import classify_title
         prefs = self.profile.preferences
         allowed_modes = set(prefs.get("work_modes", ["remote", "hybrid"])) | {"unknown"}
         reject = [r.lower() for r in self.profile.seniority.get("reject_levels", [])]
         out = []
         for job in jobs:
             if job.work_mode not in allowed_modes:
+                continue
+            # Drop completely off-target professions (software/developer/coding/engineering for non-tech roles)
+            family, _ = classify_title(job.title, self.profile)
+            if family == "off-target":
                 continue
             # India work-authorization gate
             verdict, _ = eligible(job.location, job.description)

@@ -63,11 +63,17 @@ TITLE_ADJACENT = re.compile(
 # Titles from entirely different professions — a resume tailored from this profile
 # would never be competitive, so they are hard-capped.
 TITLE_DISQUALIFY = re.compile(
-    r"\b(software|developer|programmer|frontend|front-end|backend|back-end|full[- ]stack|"
+    r"\b(software|developer|programmer|coding|coder|shopify|"
+    r"frontend|front-end|backend|back-end|full[- ]stack|"
     r"devops|sre|site reliability|platform engineer|security engineer|network engineer|"
+    r"cloud engineer|cloud devops|cloud platform|cloud infrastructure|"
     r"mechanical engineer|electrical engineer|civil engineer|chemical engineer|"
-    r"engineering manager|solutions architect|data engineer|data scientist|"
-    r"machine learning|ml engineer|ai engineer|qa engineer|test engineer|"
+    r"engineering manager|solutions architect|software architect|data engineer|data scientist|"
+    r"machine learning|ml engineer|ai engineer|applied ai|qa engineer|test engineer|software test|automation test|test development|tester|testing|"
+    r"compiler|firmware|asic verification|chip engineering|pcb library|deep learning|"
+    r"service desk|systems engineer|support engineer|salesforce developer|salesforce engineer|"
+    r"servicenow developer|power platform developer|database management|ms sql|middleware|"
+    r"react|angular|next\.js|golang|\.net|java backend|python/aws|"
     r"ux|ui designer|graphic designer|copywriter|content writer|journalist|editor|"
     r"account executive|sales representative|sales development|sdr|bdr|"
     r"recruiter|talent acquisition|nurse|physician|therapist|teacher|tutor|professor|"
@@ -85,25 +91,20 @@ def classify_title(title: str, profile: Profile | None = None) -> tuple[str, flo
         if any(k in profile_text for k in ["secretar", "company secretary", "governance", "compliance", "law", "ll.b"]):
             is_legal_or_cs = True
 
-    disqualify_pat = TITLE_DISQUALIFY
     if is_legal_or_cs:
-        # Don't disqualify legal or secretarial roles for legal/CS candidates
-        disqualify_pat = re.compile(
-            r"\b(software|developer|programmer|frontend|front-end|backend|back-end|full[- ]stack|"
-            r"devops|sre|site reliability|platform engineer|security engineer|network engineer|"
-            r"mechanical engineer|electrical engineer|civil engineer|chemical engineer|"
-            r"engineering manager|solutions architect|data engineer|data scientist|"
-            r"machine learning|ml engineer|ai engineer|qa engineer|test engineer|"
-            r"ux|ui designer|graphic designer|copywriter|content writer|journalist|editor|"
-            r"account executive|sales representative|sales development|sdr|bdr|"
-            r"recruiter|talent acquisition|nurse|physician|therapist|teacher|tutor|professor|"
-            r"driver|technician|electrician|welder|chef|barista|cashier|security guard|"
-            r"social media|influencer|dentist|pharmacist|veterinar\w+)\b", re.I)
+        # For Legal / CS candidate, disqualify ALL software, developer, engineering, and tech roles
+        cs_disqualify = re.compile(
+            r"\b(software|developer|programmer|coding|coder|shopify|engineer|engineering|architect|"
+            r"frontend|front-end|backend|back-end|full[- ]stack|"
+            r"devops|sre|site reliability|cloud|platform engineer|security engineer|network|"
+            r"data engineer|data scientist|machine learning|ml engineer|ai engineer|tester|testing|"
+            r"database|middleware|application|sql|compiler|firmware|"
+            r"ux|ui designer|graphic designer|copywriter|content writer|editor|"
+            r"sales representative|sdr|bdr|recruiter|talent acquisition|"
+            r"nurse|physician|driver|technician|electrician|social media)\b", re.I)
+        if cs_disqualify.search(t):
+            return "off-target", 0.0
 
-    if disqualify_pat.search(t):
-        return "off-target", 0.0
-
-    if is_legal_or_cs:
         if re.search(r"\b(company secretary|secretarial|corporate governance|statutory compliance|"
                      r"board governance|entity management|compliance officer|sebi|regulatory compliance|"
                      r"secretarial officer|secretarial analyst|governance manager|corporate secretar\w+|"
@@ -112,6 +113,9 @@ def classify_title(title: str, profile: Profile | None = None) -> tuple[str, flo
         if re.search(r"\b(compliance|legal|regulatory|paralegal|law|contract\w*|due diligence|"
                      r"corporate affairs|governance|statutory)\b", t, re.I):
             return "adjacent", 10.5
+
+    if TITLE_DISQUALIFY.search(t):
+        return "off-target", 0.0
 
     if TITLE_CORE.search(t):
         return "core", 18.0
@@ -217,13 +221,27 @@ def deterministic_score(job: Job, profile: Profile) -> JobScore:
             hit_weight += comp.weight * min(1.0, 0.60 + 0.14 * (hits - 1))
 
     title_family, title_fit = classify_title(job.title, profile)
+    if title_family == "off-target":
+        return JobScore(
+            job_id=job.job_id,
+            match_score=0.0,
+            breakdown=ScoreBreakdown(skill_match=0.0, seniority_alignment=0.0,
+                                     remote_flexibility=0.0, domain_relevance=0.0,
+                                     company_growth=0.0, total=0.0),
+            matched_competencies=[],
+            missing_keywords=[c.name for c in comps if c.weight >= 8],
+            ats_keywords=[],
+            seniority_detected="off-target",
+            growth_stage="off-target",
+            tier="F",
+            title_family="off-target",
+        )
+
     # A JD exercises only part of a profile, but demanding 75% of the weighted
     # competency mass keeps the body component genuinely discriminating.
     coverage = min(1.0, (hit_weight / total_weight) / 0.75)
     body_fit = 27.0 * coverage
-    if title_family == "off-target":
-        body_fit *= 0.25
-    elif title_family == "unrelated":
+    if title_family == "unrelated":
         body_fit *= 0.65
     skill = min(WEIGHTS["skill"], title_fit + body_fit)
 

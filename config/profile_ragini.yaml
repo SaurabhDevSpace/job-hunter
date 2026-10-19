@@ -206,4 +206,6 @@ achievements:
 preferences:
   work_modes: [remote, hybrid, onsite]
   locations: [Bengaluru, Mumbai, Pune, Hyderabad, Gurgaon, Delhi NCR, Chennai, Remote - India, Worldwide Remote]
-  exclude_keywords: [unpaid, commission only, field sales, door to door, tele-caller, bpo voice]
+  exclude_keywords: [unpaid, commission only, field sales, door to door, tele-caller, bpo voice,
+                     software developer, software engineer, shopify developer, coding tasks,
+                     engineer, engineering, full stack, devops, backend, frontend]
