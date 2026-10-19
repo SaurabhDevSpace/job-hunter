@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-from .config import DB_PATH, ensure_dirs
+from .config import DB_PATH, db_path, ensure_dirs
 from .models import Job, JobScore
 
 CUSTOM_TAILOR_SOURCE = "My Own Search"
@@ -117,9 +117,9 @@ def _fmt_ts(iso: str | None) -> str:
 
 
 class Store:
-    def __init__(self, path: Path | str = DB_PATH):
+    def __init__(self, path: Path | str | None = None):
         ensure_dirs()
-        self.path = str(path)
+        self.path = str(path or db_path())
         with self.conn() as c:
             c.executescript(SCHEMA)
 

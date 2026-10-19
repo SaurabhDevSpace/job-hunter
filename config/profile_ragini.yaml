@@ -1,0 +1,209 @@
+# =============================================================================
+# CANDIDATE GROUND-TRUTH PROFILE: Ragini Pathode
+# Derived from resume (/Users/sbrahman/Downloads/Ragini Pathode.pdf) and target JD
+# =============================================================================
+
+name: Ragini Pathode
+headline: Corporate Governance, Company Secretarial & Regulatory Compliance Professional
+current_title: Associate 1, CSC Fund Services (India) / Intertrust Group
+location: Bengaluru, Karnataka, India
+email: raginipathode@gmail.com
+phone: "+91-9359639052"
+linkedin: "https://www.linkedin.com/in/ragini-pathode-045428136"
+years_experience: 3
+
+summary: >-
+  Qualified Company Secretary (ICSI) and Law Graduate (LL.B, Government Law College Mumbai)
+  with extensive experience in corporate secretarial administration, entity governance,
+  and regulatory compliance. Proven expertise in drafting board and shareholder resolutions,
+  minutes, statutory filings, and corporate documentation across 20,000+ legal entities for
+  global institutional clients including Blackstone, Goldman Sachs, J.P. Morgan, and Hayfin Capital.
+  Hands-on experience in offshore entity administration (Cayman Islands, BVI, CIMA, BOTA),
+  SEBI LODR listing compliance at the National Stock Exchange of India (NSE), and Companies Act 2013
+  statutory filings (MGT-7, AOC-4, PAS-6, DIR-3 KYC) at Shipping Corporation of India. Adept with
+  Diligent portal, SharePoint, statutory registers, KYC/FATCA/CRS requirements, and governance automation.
+
+competencies:
+  - name: Corporate Secretarial & Board Governance
+    weight: 10
+    aliases: [corporate secretarial, company secretary, cs, board meeting, board minutes,
+              meeting minutes, shareholder meetings, agm, egm, board resolutions, board packs,
+              committee meetings, agenda, charter documents, articles of association, memorandum of association,
+              aoa, moa, appointment of directors, resignation of officers]
+  - name: Statutory Filings & MCA / ROC Compliance
+    weight: 10
+    aliases: [mca, roc, companies act, companies act 2013, statutory forms, annual returns,
+              mgt-7, aoc-4, pas-6, dir-3, kyc, dir-3 kyc, statutory registers, corporate affairs,
+              statutory compliance, filing deadlines, iepf, iepf-5]
+  - name: Entity Administration & Offshore Governance
+    weight: 9
+    aliases: [entity management, legal entity administration, offshore entities, onshore entities,
+              cayman islands, bvi, british virgin islands, cima, cima filings, bota, bota submissions,
+              company incorporation, share allotments, share transfers, capital reduction,
+              statutory registers updates, corporate actions]
+  - name: Capital Infusion, Due Diligence & Share Transactions
+    weight: 9
+    aliases: [share allotment, share transfer, capital infusion, debt infusion, due diligence,
+              debenture trust deed, debentures, non-convertible debentures, ncd, listing application,
+              information memorandum, rta, nsdl, cdsl, tripartite agreements, dividend revalidation]
+  - name: Regulatory Compliance & SEBI LODR
+    weight: 9
+    aliases: [sebi, sebi lodr, lodr, listing obligations, stock exchange, nse, bse, disclosures,
+              debt listing, regulatory correspondence, fema, dpe guidelines, circulars,
+              enforcement notices, compliance tracker, corporate governance reporting]
+  - name: Governance Portals & Records Management
+    weight: 8
+    aliases: [diligent, diligent portal, blueprint, hpa, sharepoint, onedrive, entity management system,
+              statutory company records, adhoc reports, data integrity, data quality, dqt, remediation]
+  - name: KYC, FATCA, CRS & Regulatory Questionnaires
+    weight: 8
+    aliases: [kyc, know your customer, fatca, crs, common reporting standard, beneficial ownership,
+              ons, office for national statistics, regulatory questionnaires, anti-money laundering, aml]
+  - name: Legal Drafting & Policy Formulation
+    weight: 8
+    aliases: [legal drafting, template documents, related party transactions, rpt, whistleblower policy,
+              csr policy, compliance framework, corporate governance notes, legal research, company law reforms]
+  - name: Process Automation, SOPs & Structure Charts
+    weight: 7
+    aliases: [sop, sops, drafting sops, automation of processes, workflow automation, structure charts,
+              org charts, powerpoint, ms powerpoint, process improvement, standardization]
+  - name: Stakeholder & Client Relationship Management
+    weight: 7
+    aliases: [client relationship, institutional clients, internal stakeholders, operating businesses,
+              cross-functional, liaison, merchant bankers, debenture trustees, escalations]
+
+education:
+  - degree: Bachelor of Laws (LL.B)
+    institution: Government Law College, Mumbai
+    location: Mumbai, India
+    dates: 01/2021 - 12/2024
+    details: ""
+  - degree: Company Secretary (CS)
+    institution: Institute of Company Secretaries of India (ICSI)
+    location: India
+    dates: 01/2018 - 01/2025
+    details: "Associate Member / Qualified CS"
+  - degree: Bachelor of Management Studies (BMS)
+    institution: Usha Pravin Gandhi College, Mumbai
+    location: Mumbai, India
+    dates: 01/2016 - 01/2021
+    details: "GPA: 9.7 | Distinction"
+  - degree: Higher Secondary Certificate (HSC) - Commerce
+    institution: Gurunanak College, Gondia
+    location: Gondia, Maharashtra, India
+    dates: 2014 - 2016
+    details: "91% | College Topper"
+
+experience:
+  - company: CSC Fund Services (India) / Intertrust Group
+    title: Associate 1 - Corporate Secretarial & Entity Management
+    location: Bengaluru, India
+    start: 2025-09
+    end: null
+    dates: Sept 2025 - Present
+    bullets:
+      - text: "Managed and executed corporate secretarial and legal entity administration tasks across an extensive portfolio exceeding 20,000 legal entities, ensuring rigorous statutory accuracy and service standards."
+        tags: [Corporate Secretarial & Board Governance, Entity Administration & Offshore Governance]
+      - text: "Managed end-to-end offshore company incorporations, ongoing entity administration, CIMA filings, BOTA submissions, and jurisdiction-specific corporate actions for Cayman Islands and BVI entities."
+        tags: [Entity Administration & Offshore Governance, Statutory Filings & MCA / ROC Compliance]
+      - text: "Drafted and reviewed legal documentation including board resolutions, AGM/EGM documentation, meeting minutes, and comprehensive supporting board packs."
+        tags: [Corporate Secretarial & Board Governance, Legal Drafting & Policy Formulation]
+      - text: "Maintained and updated statutory registers, corporate records, and Diligent / SharePoint repositories, ensuring 100% data integrity and audit readiness."
+        tags: [Governance Portals & Records Management, Statutory Filings & MCA / ROC Compliance]
+      - text: "Collaborated with Data Quality Team (DQT) on corporate record validation, governance quality checks, remediation workflows, and ad-hoc Diligent reporting."
+        tags: [Governance Portals & Records Management, Process Automation, SOPs & Structure Charts]
+      - text: "Provided dedicated corporate governance support for premier institutional clients including Blackstone, Goldman Sachs, J.P. Morgan, and Hayfin Capital."
+        tags: [Stakeholder & Client Relationship Management, Entity Administration & Offshore Governance]
+      - text: "Handled FATCA/CRS classifications, KYC questionnaires, and entity structure chart updates across diverse onshore and offshore holding structures."
+        tags: [KYC, FATCA, CRS & Regulatory Questionnaires, Process Automation, SOPs & Structure Charts]
+
+  - company: National Stock Exchange of India (NSE)
+    title: Deputy Manager - Regulatory Compliance
+    location: Mumbai, India
+    start: 2025-06
+    end: 2025-08
+    dates: June 2025 - Aug 2025
+    bullets:
+      - text: "Monitored SEBI (LODR) Regulations and enforced post-listing compliance for debt-listed entities, tracking disclosures and ensuring adherence to regulatory timelines."
+        tags: [Regulatory Compliance & SEBI LODR, Statutory Filings & MCA / ROC Compliance]
+      - text: "Reviewed listing applications, information memorandums, and debenture trust deeds for non-convertible debenture (NCD) issuances."
+        tags: [Capital Infusion, Due Diligence & Share Transactions, Regulatory Compliance & SEBI LODR]
+      - text: "Coordinated debt listing workflows and regulatory correspondence among issuers, debenture trustees, and merchant bankers to streamline communication and filings."
+        tags: [Regulatory Compliance & SEBI LODR, Stakeholder & Client Relationship Management]
+      - text: "Tracked continuous disclosures, financial results, credit rating revisions, and electronic data submissions on NSE's electronic platform."
+        tags: [Regulatory Compliance & SEBI LODR, Governance Portals & Records Management]
+      - text: "Formulated regulatory response notes on SEBI circulars, enforcement notices, approval memos, and suspension-related communications."
+        tags: [Legal Drafting & Policy Formulation, Regulatory Compliance & SEBI LODR]
+
+  - company: Shipping Corporation of India Limited (SCIL)
+    title: CS Management Trainee
+    location: Mumbai, India
+    start: 2023-04
+    end: 2025-03
+    dates: April 2023 - March 2025
+    bullets:
+      - text: "Ensured comprehensive compliance with Companies Act 2013, SEBI LODR, FEMA regulations, and DPE guidelines for a listed central public sector enterprise."
+        tags: [Statutory Filings & MCA / ROC Compliance, Regulatory Compliance & SEBI LODR]
+      - text: "Prepared board notices, agendas, resolutions, meeting minutes, and governance documentation for board and committee meetings."
+        tags: [Corporate Secretarial & Board Governance, Legal Drafting & Policy Formulation]
+      - text: "Executed statutory MCA/ROC e-filings within statutory deadlines, including Form MGT-7 (Annual Return), AOC-4 (Financial Statements), PAS-6, and DIR-3 KYC."
+        tags: [Statutory Filings & MCA / ROC Compliance, Corporate Secretarial & Board Governance]
+      - text: "Maintained statutory registers for parent company and subsidiaries, ensuring full statutory compliance and audit readiness."
+        tags: [Statutory Filings & MCA / ROC Compliance, Entity Administration & Offshore Governance]
+      - text: "Drafted and reviewed corporate governance policies, including Related Party Transactions (RPT), Whistleblower policies, and CSR frameworks."
+        tags: [Legal Drafting & Policy Formulation, Regulatory Compliance & SEBI LODR]
+      - text: "Assisted in dividend claims processing, dividend warrant revalidation, RTA transitions, IEPF-5 filings, and NSDL/CDSL tripartite agreements."
+        tags: [Capital Infusion, Due Diligence & Share Transactions, Statutory Filings & MCA / ROC Compliance]
+
+  - company: Tata Consultancy Services Ltd.
+    title: BPS Trainee - Financial Operations
+    location: Pune, India
+    start: 2021-11
+    end: 2022-04
+    dates: Nov 2021 - April 2022
+    bullets:
+      - text: "Managed financial operations and customer queries regarding EMI options, account functions, and card refunds for Bajaj Finserv with high accuracy."
+        tags: [Stakeholder & Client Relationship Management, Governance Portals & Records Management]
+
+skills:
+  Secretarial & Governance:
+    - Companies Act 2013
+    - Board & Shareholder Minutes Drafting
+    - Board Resolutions & Agendas
+    - Annual Returns (MGT-7, AOC-4)
+    - Statutory Registers Maintenance
+    - Officer Appointments & Resignations
+    - Share Allotments & Transfers
+    - Amendment of Charter Documents (MOA/AOA)
+  Regulatory & Legal:
+    - SEBI (LODR) Regulations
+    - MCA / ROC Filings (PAS-6, DIR-3 KYC)
+    - CIMA & BOTA Submissions (Cayman & BVI)
+    - Legal Drafting & Contract Review
+    - Related Party Transactions (RPT)
+    - IEPF-5 & Dividend Administration
+    - FEMA & DPE Guidelines
+  Entity & Operations:
+    - Entity Management Systems (Diligent Portal)
+    - SharePoint / OneDrive Records Management
+    - KYC / FATCA / CRS Requirements
+    - Due Diligence & Capital Infusion Support
+    - Entity Structure Charts (MS PowerPoint)
+    - SOP Drafting & Process Automation
+    - Institutional Client Governance (20,000+ entities)
+
+certifications:
+  - Qualified Company Secretary - Institute of Company Secretaries of India (ICSI)
+  - Member of ICSI
+  - Bachelor of Laws (LL.B) - Government Law College, Mumbai
+
+achievements:
+  - "Qualified Company Secretary (ICSI) alongside Bachelor of Laws (LL.B) from Government Law College, Mumbai."
+  - "Managed secretarial compliance for premier global institutional clients (Blackstone, Goldman Sachs, J.P. Morgan) across 20,000+ entities at CSC."
+  - "College Topper in HSC Commerce with 91% aggregate at Gurunanak College."
+  - "Graduated Bachelor of Management Studies with Distinction (GPA 9.7)."
+
+preferences:
+  work_modes: [remote, hybrid, onsite]
+  locations: [Bengaluru, Mumbai, Pune, Hyderabad, Gurgaon, Delhi NCR, Chennai, Remote - India, Worldwide Remote]
+  exclude_keywords: [unpaid, commission only, field sales, door to door, tele-caller, bpo voice]

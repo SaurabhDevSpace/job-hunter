@@ -277,6 +277,28 @@ looser. Do not set `overflow:hidden` or `display:flow-root` on `.body` in the pr
 both establish a block formatting context that WeasyPrint cannot fragment, silently
 clipping the resume to one page.
 
+## Running Ragini's Job Hunter (Port 8081)
+
+To reuse the full engine for **Ragini Pathode** (Corporate Governance, Company Secretarial & Regulatory Compliance):
+
+```bash
+./run_ragini.sh
+```
+
+Or via environment variables:
+
+```bash
+export JOBHUNTER_PROFILE="config/profile_ragini.yaml"
+export JOBHUNTER_SEARCH_MATRIX="config/search_matrix_ragini.yaml"
+export JOBHUNTER_DATA_DIR="data_ragini"
+export JOBHUNTER_DB="data_ragini/jobhunter.sqlite3"
+
+python -m jobhunter.cli serve --port 8081
+```
+
+- **Ashwini's portal:** http://127.0.0.1:8080
+- **Ragini's portal:** http://127.0.0.1:8081
+
 ---
 
 ## 6 · Web dashboard & daily automation

@@ -19,9 +19,21 @@ except ImportError:  # pragma: no cover
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = ROOT / "config"
-DATA_DIR = Path(os.getenv("JOBHUNTER_DATA_DIR", ROOT / "data"))
-OUTPUT_DIR = DATA_DIR / "output"
-DB_PATH = Path(os.getenv("JOBHUNTER_DB", DATA_DIR / "jobhunter.sqlite3"))
+def data_dir() -> Path:
+    return Path(os.getenv("JOBHUNTER_DATA_DIR", ROOT / "data"))
+
+
+def output_dir() -> Path:
+    return data_dir() / "output"
+
+
+def db_path() -> Path:
+    return Path(os.getenv("JOBHUNTER_DB", data_dir() / "jobhunter.sqlite3"))
+
+
+DATA_DIR = data_dir()
+OUTPUT_DIR = output_dir()
+DB_PATH = db_path()
 
 load_dotenv(ROOT / ".env")
 
@@ -210,21 +222,29 @@ class ModelConfig:
         return {"max_tokens": p.get("max_tokens", 2000), "temperature": p.get("temperature", 0.2)}
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=4)
 def load_profile(path: str | None = None) -> Profile:
-    p = Path(path) if path else CONFIG_DIR / "profile.yaml"
+    if path:
+        p = Path(path)
+    else:
+        env_profile = os.getenv("JOBHUNTER_PROFILE")
+        p = Path(env_profile) if env_profile else CONFIG_DIR / "profile.yaml"
     with open(p, "r", encoding="utf-8") as fh:
         return Profile(yaml.safe_load(fh))
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=4)
 def load_search_matrix(path: str | None = None) -> dict[str, Any]:
-    p = Path(path) if path else CONFIG_DIR / "search_matrix.yaml"
+    if path:
+        p = Path(path)
+    else:
+        env_matrix = os.getenv("JOBHUNTER_SEARCH_MATRIX")
+        p = Path(env_matrix) if env_matrix else CONFIG_DIR / "search_matrix.yaml"
     with open(p, "r", encoding="utf-8") as fh:
         return yaml.safe_load(fh)
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=4)
 def load_model_config(path: str | None = None) -> ModelConfig:
     p = Path(path) if path else CONFIG_DIR / "models.json"
     with open(p, "r", encoding="utf-8") as fh:
@@ -232,5 +252,7 @@ def load_model_config(path: str | None = None) -> ModelConfig:
 
 
 def ensure_dirs() -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    d = data_dir()
+    o = output_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    o.mkdir(parents=True, exist_ok=True)

@@ -17,8 +17,10 @@ import json
 import logging
 import os
 import sys
+from pathlib import Path
 
-from .config import OUTPUT_DIR, load_model_config, load_profile, load_search_matrix
+from .config import (OUTPUT_DIR, load_model_config, load_profile,
+                     load_search_matrix, output_dir)
 from .db import Store
 from .llm import LLMError, OpenRouterClient
 from .pipeline import Pipeline
@@ -75,7 +77,7 @@ def cmd_daily(args: argparse.Namespace) -> int:
         print()
     for e in report.errors:
         print(f"  ERROR: {e}")
-    print(f"Artifacts -> {OUTPUT_DIR}")
+    print(f"Artifacts -> {output_dir()}")
     return 0
 
 
@@ -245,7 +247,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     print("\n== storage ==")
     store = Store()
     print(f"  db             : {store.path}")
-    print(f"  output         : {OUTPUT_DIR}")
+    print(f"  output         : {output_dir()}")
     print("  stats          : " + json.dumps({k: v for k, v in store.stats().items()
                                               if not isinstance(v, list)}))
     return 0
@@ -322,6 +324,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="jobhunter", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("-v", "--verbose", action="store_true")
+    p.add_argument("--profile", help="Path to profile YAML (defaults to JOBHUNTER_PROFILE or config/profile.yaml)")
+    p.add_argument("--matrix", help="Path to search matrix YAML (defaults to JOBHUNTER_SEARCH_MATRIX or config/search_matrix.yaml)")
     sub = p.add_subparsers(dest="command", required=True)
 
     def add_source_flags(sp: argparse.ArgumentParser) -> None:
@@ -399,6 +403,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     _setup_logging(args.verbose)
+    if getattr(args, "profile", None):
+        os.environ["JOBHUNTER_PROFILE"] = str(Path(args.profile).resolve())
+    if getattr(args, "matrix", None):
+        os.environ["JOBHUNTER_SEARCH_MATRIX"] = str(Path(args.matrix).resolve())
     try:
         return int(args.func(args) or 0)
     except KeyboardInterrupt:

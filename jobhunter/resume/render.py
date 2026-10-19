@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ..config import OUTPUT_DIR, Profile
+from ..config import OUTPUT_DIR, Profile, output_dir
 from ..models import Job
 from .pdf import html_to_pdf
 from .tailor import TailoredResume
@@ -20,7 +20,7 @@ SECTION_ORDER = ["PROFESSIONAL SUMMARY", "CORE COMPETENCIES", "PROFESSIONAL EXPE
                  "TECHNICAL SKILLS", "CERTIFICATIONS", "EDUCATION", "SELECTED ACHIEVEMENTS"]
 
 # Degrees worth surfacing in the header banner, highest signal first.
-_FLAGSHIP_DEGREE = re.compile(r"\b(MBA|PGDM|Master|MS\b|M\.S\.|MSc|PhD|Doctor)", re.I)
+_FLAGSHIP_DEGREE = re.compile(r"\b(Company Secretary|CS\b|LL\.?B\b|Law|Advocate|MBA|PGDM|Master|MS\b|M\.S\.|MSc|PhD|Doctor)", re.I)
 
 
 def credential_banner(resume: TailoredResume, profile: Profile) -> str:
@@ -46,7 +46,7 @@ def slug(*parts: str) -> str:
 
 
 def output_paths(job: Job, base_dir: Path | None = None) -> dict[str, Path]:
-    d = (base_dir or OUTPUT_DIR) / datetime.now().strftime("%Y-%m-%d")
+    d = (base_dir or output_dir()) / datetime.now().strftime("%Y-%m-%d")
     d.mkdir(parents=True, exist_ok=True)
     stem = slug(job.company or "Company", job.title or "Role", job.job_id[:6])
     return {
@@ -290,7 +290,8 @@ def render_text(resume: TailoredResume, profile: Profile, job: Job, path: Path) 
         L += ["CERTIFICATIONS"] + [f"- {x}" for x in resume.certifications] + [""]
     L += ["EDUCATION"]
     for e in resume.education:
-        L.append(f"{e.get('degree','')} | {e.get('institution','')} | {e.get('dates','')}")
+        detail = f" ({e['details']})" if e.get("details") else ""
+        L.append(f"{e.get('degree','')}{detail} | {e.get('institution','')} | {e.get('dates','')}")
     if resume.selected_achievements:
         L += ["", "SELECTED ACHIEVEMENTS"] + [f"- {a}" for a in resume.selected_achievements]
 
@@ -361,16 +362,43 @@ li::marker{color:var(--brand)}
 .edu .d{font-size:12.8px;font-weight:700;color:var(--ink)}
 .edu .i{font-size:12px;color:var(--ink-soft)}
 .edu .m{font-size:11.5px;color:var(--muted)}
+.edu .g{font-size:11.5px;font-weight:600;color:var(--brand);margin-top:2px}
 .cert{font-size:12px;color:var(--ink-soft);margin-bottom:5px;padding-left:14px;position:relative}
 .cert::before{content:"";position:absolute;left:0;top:6px;width:6px;height:6px;
   border-radius:50%;background:var(--accent)}
 .tag-note{margin:0 auto 26px;max-width:820px;font-size:11px;color:#7b8695;
   text-align:center;line-height:1.6}
 @media print{
-  @page{size:A4;margin:11mm}
+  @page{size:A4;margin:8mm 9mm}
   html,body{background:#fff}
   .sheet{margin:0;box-shadow:none;border-radius:0;max-width:none}
   .tag-note{display:none}
+  .hero{padding:20px 28px 18px !important}
+  .hero h1{font-size:26px !important}
+  .hero .role{font-size:13.5px !important;margin-top:3px !important}
+  .hero .cred{font-size:11.5px !important;margin-top:6px !important;padding:3px 10px !important}
+  .hero .contact{font-size:11.5px !important;margin-top:9px !important;gap:4px 12px !important}
+  .main{padding:18px 22px 20px 26px !important;width:calc(100% - 265px) !important}
+  .side{padding:18px 22px 20px 18px !important;width:265px !important}
+  h2{font-size:10.5px !important;margin-bottom:8px !important}
+  section{margin-bottom:14px !important}
+  .summary{font-size:12.4px !important;line-height:1.48 !important}
+  .role-block{margin-bottom:12px !important;padding-left:16px !important}
+  .role-title{font-size:13.5px !important}
+  .role-org{font-size:12.5px !important}
+  .role-meta{font-size:11px !important}
+  ul{margin-top:5px !important;padding-left:14px !important}
+  li{font-size:12.2px !important;line-height:1.45 !important;margin-bottom:3px !important}
+  .chip{font-size:11px !important;padding:3px 9px !important}
+  .skill-group{margin-bottom:8px !important}
+  .skill-group .g{font-size:11px !important}
+  .skill-group .v{font-size:11.5px !important;line-height:1.4 !important}
+  .edu{margin-bottom:8px !important}
+  .edu .d{font-size:11.8px !important}
+  .edu .i{font-size:11.2px !important}
+  .edu .m{font-size:10.8px !important}
+  .edu .g{font-size:11px !important;margin-top:1px !important}
+  .cert{font-size:11.5px !important;margin-bottom:4px !important}
   /* Keep small units intact, but let long sections flow across pages -- pinning
      whole sections or roles leaves large empty gaps when one does not fit. */
   .edu,.skill-group,.chip,li{break-inside:avoid}
@@ -457,6 +485,8 @@ def render_html(resume: TailoredResume, profile: Profile, job: Job, path: Path) 
                   f"<div class='i'>{esc(str(e.get('institution', '')))}</div>"]
             if e.get("dates"):
                 H.append(f"<div class='m'>{esc(str(e['dates']))}</div>")
+            if e.get("details"):
+                H.append(f"<div class='g'>{esc(str(e['details']))}</div>")
             H.append("</div>")
         H.append("</section>")
     if resume.certifications:

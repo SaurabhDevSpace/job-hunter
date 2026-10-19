@@ -1,0 +1,237 @@
+# Separate candidate profile; does not replace config/profile.yaml.
+# Baseline: Saurabh_Brahmankar_SE_3G25.pdf; updated 2026-09-27.
+# Career dates, awards and patent-publication claims are candidate supplied.
+# Never infer patent grants, production adoption, sole authorship or impact metrics.
+
+name: Saurabh D. Brahmankar
+headline: SENIOR DATA SCIENTIST | SOFTWARE ENGINEER | AGENTIC AI | GENAI | MLOPs
+current_title: Senior Data Scientist, Ciena India Pvt. Ltd.
+professional_positioning: Software Engineer | Innovator @ Ciena-BluePlanet AI/ML | MLOps | Auto-ML | Gen-AI | LLM | RAG | Agentic-AI
+location: Pune, Maharashtra, India
+email: brahmankarsaurabh@gmail.com
+phone: "+91-8055800000"
+linkedin: https://www.linkedin.com/in/saurabh-brahmankar-19841a105/
+links:
+#  GitHub: https://github.com/SaurabhDevSpace
+#  Portfolio: https://saurabh-bio.short.gy/work_profile
+#  Medium: https://medium.com/@brahmankarsaurabh
+years_experience: 9
+summary: >-
+  Senior Data Scientist and Software Engineer with 9+ years across software engineering
+  and applied AI/ML. Innovator at Ciena-BluePlanet working on telecom intelligence,
+  MLOps, Auto-ML and Gen-AI. Develops LLM, RAG and Agentic-AI workflows spanning
+  multi-agent orchestration, hybrid retrieval and knowledge processing. Combines
+  hands-on engineering with technical leadership; named inventor on six U.S.-published
+  patent applications in network intelligence and automation.
+
+competencies:
+  - name: Agentic AI & Multi-Agent Systems
+    weight: 10
+    aliases: [agentic ai, multi-agent, ai agents, orchestration, supervisor, langgraph, crewai, a2a, mcp, tool calling]
+  - name: Retrieval-Augmented Generation
+    weight: 10
+    aliases: [rag, retrieval augmented generation, embeddings, vector search, reranking, knowledge retrieval, langchain]
+  - name: Applied Machine Learning
+    weight: 10
+    aliases: [machine learning, deep learning, automl, tensorflow, pytorch, predictive analytics, model development]
+  - name: Telecom Network Intelligence
+    weight: 9
+    aliases: [telecom, network optimisation, network optimization, alarm prioritization, root cause analysis, network inventory]
+  - name: Time Series & Anomaly Detection
+    weight: 9
+    aliases: [time series, forecasting, anomaly detection, predictive maintenance, real-time analytics]
+  - name: NLP & Generative AI
+    weight: 9
+    aliases: [nlp, generative ai, llm, transformers, summarization, peft, lora]
+  - name: AI Platform Engineering
+    weight: 9
+    aliases: [python, fastapi, rest, docker, kubernetes, ci/cd, deployment, observability]
+  - name: MLOps & AutoML
+    weight: 9
+    aliases: [mlops, automl, auto-ml, mlflow, kedro, model deployment, lifecycle management]
+  - name: Data Engineering & Distributed Systems
+    weight: 8
+    aliases: [kafka, spark, pyspark, airflow, sql, data pipelines, mongodb, redis]
+  - name: Technical Leadership
+    weight: 8
+    aliases: [mentoring, team leadership, stakeholder management, cross-functional, agile, technical communication]
+
+seniority:
+  target_levels: [senior, lead, staff, principal]
+  ideal_yoe_range: [8, 14]
+  reject_levels: [intern, trainee, apprentice, fresher]
+
+education:
+  - degree: B.E., Electronics & Telecommunication
+    institution: G. H. Raisoni College of Engineering, Nagpur
+    location: Nagpur, India
+    dates: "2016"
+    details: "CGPA: 9.13/10"
+
+experience:
+  - company: Ciena India Pvt. Ltd.
+    title: Senior Data Scientist
+    location: Pune, India
+    start: 2020-09
+    end: null
+    dates: September 2020 - Present
+    bullets:
+      - text: Developed AI/ML models for telecom network monitoring, anomaly detection, predictive analytics and infrastructure reliability.
+        tags: [Applied Machine Learning, Telecom Network Intelligence, Time Series & Anomaly Detection]
+      - text: Guided AutoML integration for network alarm prioritisation and incident response; translated customer requirements into data science solutions.
+        tags: [Applied Machine Learning, Telecom Network Intelligence]
+      - text: Led and mentored data scientists and engineers, delivered technical workshops and communicated findings to cross-functional stakeholders.
+        tags: [Technical Leadership]
+      - text: Developed LangGraph supervisor workflows with bounded research planning, approval gates, SQLite-persisted state and optional task-scoped worker subgraphs.
+        tags: [Agentic AI & Multi-Agent Systems, AI Platform Engineering]
+        project: agent-supervisor
+      - text: Developed a knowledge-retrieval agent combining Qdrant hybrid search, cross-encoder reranking, relevance gating and MinIO knowledge-base synchronisation.
+        tags: [Retrieval-Augmented Generation, Agentic AI & Multi-Agent Systems]
+        project: rag-platform
+      - text: Built Kedro knowledge-processing pipelines with document-aware chunking, dense and BM25 sparse indexing, local or gateway embeddings and structured LLM summarisation.
+        tags: [Retrieval-Augmented Generation, NLP & Generative AI, MLOps & AutoML]
+        project: rag-platform
+      - text: Contributed to a GenAI-powered document help chatbot to support documentation access and user interaction.
+        tags: [NLP & Generative AI, Retrieval-Augmented Generation]
+        project: documentation-chatbot
+
+  - company: Tech Mahindra Ltd.
+    title: Software Engineer (ML)
+    location: Pune, India
+    start: 2016-07
+    end: 2020-09
+    dates: July 2016 - September 2020
+    bullets:
+      - text: Built deployment-cycle predictive analytics and stakeholder dashboards; developed ML-based case classification and queue assignment tools.
+        tags: [Applied Machine Learning, Data Engineering & Distributed Systems]
+      - text: Applied NLP summarisation and image-to-text models to delivery and voice-enabled AI workflows; tested and validated model behaviour.
+        tags: [NLP & Generative AI, Applied Machine Learning]
+      - text: Collaborated with telecom clients including British Telecom and AT&T; mentored junior developers and delivered AI-integrated RPA proofs of concept.
+        tags: [Technical Leadership, Telecom Network Intelligence]
+
+# Public-facing descriptions abstract internal endpoints and deployment identifiers.
+# Recent projects are grounded in local repositories; earlier work is from the source PDF.
+projects:
+  - id: agent-supervisor
+    name: Agentic Research & Orchestration
+    company: Ciena India Pvt. Ltd.
+    bullets:
+      - "Developed LangGraph research workflows with planning, approval gates, persistent state and worker delegation; worked with Langflow/A2A integration and Docker/Helm packaging."
+    stack: [Python, LangGraph, Langflow, A2A, SQLite, Docker, Helm]
+    evidence:
+      - "BP-AGENTS/bp-langgraph-supervisor-agent/src/bp_langgraph_supervisor_agent/agent/graph.py"
+      - "BP-AGENTS/bp-langgraph-supervisor-agent/src/bp_langgraph_supervisor_agent/agent/task_worker.py"
+      - "BP-AGENTS/bp-supervisor-agent/README.md"
+  - id: rag-platform
+    name: RAG & Knowledge Retrieval
+    company: Ciena India Pvt. Ltd.
+    bullets:
+      - "Built Kedro document pipelines and Qdrant dense/BM25 retrieval with reranking, local/gateway embeddings, LLM summarisation and MinIO knowledge-base sync."
+    stack: [Kedro, LangChain, Docling, PyMuPDF, Qdrant, BM25, Cross-Encoder Reranking, SentenceTransformers, LiteLLM, MinIO, AsyncIO]
+    evidence:
+      - "BP-AGENTS/bp-knowledge-retriever-agent/src/bp_knowledge_retriever_agent/agent/graph.py"
+      - "BP-AGENTS/bp-knowledge-retriever-agent/src/bp_knowledge_retriever_agent/agent/retriever.py"
+      - "BP-AGENTS/bp-knowledge-retriever-agent/README.md"
+      - "bpa_ai_sdk/bpa-gen-ai/src/bpa_gen_ai/pipelines/core/Ingester/ingestor.py"
+      - "bpa_ai_sdk/bpa-gen-ai/src/bpa_gen_ai/pipelines/core/Summarizer/summarizer.py"
+      - "bpa_ai_sdk/bpa-gen-ai/src/bpa_gen_ai/pipelines/common/__init__.py"
+      - "bpa_ai_sdk/bpa-gen-ai/src/bpa_gen_ai/pipelines/data_processing/pipeline.py"
+  - id: documentation-chatbot
+    name: GenAI Documentation Assistant
+    company: Ciena India Pvt. Ltd.
+    bullets:
+      - "Contributed to a GenAI-powered document help chatbot supporting documentation access and user interaction."
+    evidence: ["Saurabh_Brahmankar_SE_3G25.pdf, page 2: Ciena achievements"]
+  - id: deployment-analytics
+    name: Deployment Predictive Analytics
+    company: Tech Mahindra Ltd.
+    bullets:
+      - "Built deployment-cycle predictive analytics and dashboards to give stakeholders visibility into project timelines and performance."
+    evidence: ["Saurabh_Brahmankar_SE_3G25.pdf, page 2: Tech Mahindra predictive analytics"]
+  - id: case-classification
+    name: ML Case Classification & Routing
+    company: Tech Mahindra Ltd.
+    bullets:
+      - "Developed ML-based case classification and queue assignment tools for operational workflows."
+    evidence: ["Saurabh_Brahmankar_SE_3G25.pdf, page 2: Tech Mahindra automation tools"]
+  - id: nlp-vision
+    name: NLP & Vision Automation
+    company: Tech Mahindra Ltd.
+    bullets:
+      - "Applied text summarisation and image-to-text models to delivery and voice-enabled AI workflows."
+    evidence: ["Saurabh_Brahmankar_SE_3G25.pdf, page 2: Tech Mahindra NLP and vision"]
+
+# Preserved as early-career history, excluded from the compact senior-level resume.
+early_career:
+  - company: Persistent Systems Ltd.
+    title: Application Development & DB Management (Architecture/Schema)
+    location: Nagpur, India
+    dates: August 2015 - March 2016
+    type: Internship
+  - company: InfoSai Pvt. Ltd.
+    title: Application Development
+    location: Nagpur, India
+    dates: July 2014 - January 2015
+    type: Internship
+  - company: BSNL India
+    title: Trainee
+    location: Nagpur, India
+    dates: January 2014 - July 2015
+    type: Training
+
+skills:
+  Programming & APIs: [Python, Java, SQL, FastAPI, Flask, REST APIs, WebSocket]
+  Agentic AI & GenAI: [LangGraph, LangChain, Langflow, CrewAI, AutoGen, MCP, A2A, LLM, PEFT/LoRA]
+  RAG & Knowledge Systems: [Qdrant, BM25, Hybrid Search, Cross-Encoder Reranking, SentenceTransformers, Docling, PyMuPDF, LiteLLM]
+  AI/ML & MLOps: [TensorFlow, PyTorch, Transformers, PyCaret, MLflow, Kedro, Langfuse, AutoML, NLP]
+  Data & Platform: [Kafka, PySpark, Airflow, PostgreSQL, Redis, MinIO, Docker, Kubernetes, Helm]
+  Cloud & Delivery: [AWS, GCP, Azure, Git, Jenkins, Grafana]
+
+# Additional baseline-listed tools retained without implying equal proficiency.
+additional_skills:
+  Programming: [Scala, COBOL, "C++"]
+  AI & Data: [spaCy, NLTK, Gensim, Pydantic, Kedro, LlamaIndex, ChromaDB, Hadoop, HDFS, Spark, ClickHouse, MySQL, S3]
+  Analytics & Storage: [Keras, OpenCV, MongoDB, Elasticsearch, Neo4j, Tableau, Power BI, Matplotlib, Plotly]
+  Web & Development: [Django, Streamlit, Spring Boot, Hibernate, Maven, AngularJS, Apache Solr, JupyterLab]
+  Delivery & Cloud: [Bitbucket, TeamCity, OpenStack, Amazon Bedrock, SageMaker, Vertex AI, Azure AI Foundry]
+
+certifications: []
+
+achievements:
+  - "Named inventor on six U.S.-published patent applications in AI/ML-driven network intelligence and automation."
+  - "Ciena Bravo Award: 10+ recognitions for AI applications, research and patented innovations (2020-2025)."
+  - "Tech Mahindra Pat on Back Award: 5+ recognitions for coding and proof-of-concept delivery (2016-2020)."
+  - "Two-time Tech Mahindra hackathon winner for AI-integrated RPA solutions (December 2019)."
+
+# Titles and publication count come from the supplied PDF; grant status is unverified.
+patents:
+  - Automatic Geolocation Detection for Network Inventory Systems
+  - Root-Cause Analysis and Closed-Loop Automation for Wi-Fi Failures using Deep Learning
+  - Forecasting Recurring Anomalies in Time Series Data
+  - Using Machine Learning to Distinguish Between Access and Uplink Ports in Telecom Networks
+  - Network Alarm Prioritization using a Hybrid Boosting AutoML System
+  - Automatic Suppression of Non-actionable Network Alarms using Machine Learning
+
+languages: [English, Marathi, Hindi]
+preferences: {}
+agentic_stack_evidence:
+  implemented_in_reviewed_projects:
+    - "LangGraph: bounded planning, approval gates, persistent state and optional worker subgraphs."
+    - "Qdrant: dense/BM25 hybrid retrieval, cross-encoder reranking and relevance gating."
+    - "Kedro, Docling, PyMuPDF, SentenceTransformers and LiteLLM: ingestion, chunking and embedding pipelines."
+    - "LangChain structured outputs, async summarisation, retries and pipeline status/error hooks."
+    - "Langflow/A2A integration; Docker and Helm deployment packaging."
+  baseline_reported_not_newly_verified: [MCP, CrewAI, AutoGen, PEFT/LoRA, Langfuse, MLflow]
+  recommended_development_not_claimed:
+    - "Agent evaluation with reproducible task-success, tool-use and retrieval-quality datasets."
+    - "End-to-end tracing, token/cost budgets and latency measurement for agent workflows."
+    - "Tool authorisation, prompt-injection controls and human approval for sensitive actions."
+    - "Production evidence for long-running recovery, concurrency and multi-tenant isolation."
+verification_notes:
+  - "Nine-plus years is the candidate-requested conservative experience label; employment dates remain unchanged."
+  - "Senior Data Scientist title explicitly confirmed by the candidate on 2026-09-27."
+  - "Current Ciena employment retained from the supplied PDF; no new employment dates inferred."
+  - "Serving Notice Period is a stale, time-sensitive statement in the source PDF and is not carried forward."
+  - "Patent publication identifiers and grant status were not provided; do not describe six granted patents."
+  - "Do not invent certifications, business impact percentages, deployment scale or latency metrics."
+  - "Project repositories establish implementation evidence, not individual ownership or production usage."

@@ -4,6 +4,7 @@
 *.zip
 env-backup*
 data/
+data_ragini/
 *.sqlite3
 __pycache__/
 *.py[cod]

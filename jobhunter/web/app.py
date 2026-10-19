@@ -12,8 +12,10 @@ import uuid
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 from urllib.request import Request as UrlRequest, urlopen
+
+import requests
 
 try:  # Real FastAPI when the platform allows it.
     from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
@@ -31,7 +33,8 @@ except ImportError:  # pragma: no cover - depends on the host's security policy
         http_exception_handler as _HTTP_EXC_HANDLER,
     )
 
-from ..config import OUTPUT_DIR, load_model_config, load_profile, load_search_matrix
+from ..config import (OUTPUT_DIR, load_model_config, load_profile,
+                     load_search_matrix, output_dir)
 from ..db import Store
 from ..llm import LLMError, OpenRouterClient
 from ..models import Job
@@ -159,14 +162,72 @@ def _clean_job_html(raw_html: str) -> tuple[str, str, str, str]:
         except Exception:
             continue
 
-    # 2. Fallback to standard HTML parsing
+    # 2. Look for OpenGraph and meta description (common in SPAs and Oracle Cloud portals)
+    og_title_match = re.search(r"""<meta[^>]+(?:property|name)=['"](?:og:title|twitter:title)['"][^>]+content=['"](.*?)['"]""", raw_html, flags=re.I)
+    og_desc_match = re.search(r"""<meta[^>]+(?:property|name)=['"](?:og:description|description|twitter:description)['"][^>]+content=['"](.*?)['"]""", raw_html, flags=re.I)
+    og_site_match = re.search(r"""<meta[^>]+(?:property|name)=['"](?:og:site_name)['"][^>]+content=['"](.*?)['"]""", raw_html, flags=re.I)
+
+    meta_title = html.unescape(re.sub(r"\s+", " ", og_title_match.group(1)).strip()) if og_title_match else ""
+    meta_desc = html.unescape(re.sub(r"\s+", " ", og_desc_match.group(1)).strip()) if og_desc_match else ""
+    meta_comp = html.unescape(re.sub(r"\s+", " ", og_site_match.group(1)).strip()) if og_site_match else ""
+
+    # 3. Fallback to standard HTML parsing
     title_match = re.search(r"<title[^>]*>(.*?)</title>", raw_html, flags=re.I | re.S)
     title = html.unescape(re.sub(r"\s+", " ", (title_match.group(1) if title_match else "")).strip())
     text = re.sub(r"(?is)<(script|style).*?>.*?</\1>", " ", raw_html)
     text = re.sub(r"(?s)<[^>]+>", " ", text)
     text = html.unescape(text)
     text = re.sub(r"\s+", " ", text).strip()
-    return title, text, "", ""
+
+    chosen_title = meta_title or title
+    chosen_desc = text if len(text) >= 80 else meta_desc
+    return chosen_title, chosen_desc, meta_comp, ""
+
+
+def _fetch_oracle_cloud_job(url: str) -> tuple[str, str, str, str] | None:
+    """Extract requisition details from Oracle HCM Candidate Experience REST API."""
+    try:
+        parsed = urlparse(url)
+        if "oraclecloud.com" not in (parsed.netloc or "").lower():
+            return None
+        m = re.search(r"/job(?:s)?/([^/?#]+)", parsed.path)
+        if not m:
+            return None
+        req_id = m.group(1)
+        api_url = f"{parsed.scheme or 'https'}://{parsed.netloc}/hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails/{req_id}?expand=all"
+        resp = requests.get(api_url, timeout=20, headers={"User-Agent": "Mozilla/5.0 (JobHunter)"})
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        title = html.unescape(str(data.get("Title") or "").strip())
+        desc_parts = [
+            data.get("ExternalDescriptionStr"),
+            data.get("ExternalResponsibilitiesStr"),
+            data.get("ExternalQualificationsStr"),
+            data.get("ShortDescriptionStr"),
+        ]
+        raw_combined = " ".join(str(p) for p in desc_parts if p)
+        desc_clean = re.sub(r"(?is)<(script|style).*?>.*?</\1>", " ", raw_combined)
+        desc_clean = re.sub(r"(?s)<[^>]+>", " ", desc_clean)
+        desc_clean = html.unescape(desc_clean)
+        desc_clean = re.sub(r"\s+", " ", desc_clean).strip()
+
+        comp = str(data.get("LegalEmployer") or data.get("BusinessUnit") or data.get("Organization") or "").strip()
+        if not comp:
+            try:
+                page_resp = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0 (JobHunter)"})
+                if page_resp.status_code == 200:
+                    site_match = re.search(r"""<meta[^>]+(?:property|name)=['"](?:og:site_name)['"][^>]+content=['"](.*?)['"]""", page_resp.text, flags=re.I)
+                    if site_match:
+                        comp = html.unescape(re.sub(r"\s+", " ", site_match.group(1)).strip())
+            except Exception:
+                pass
+        loc = str(data.get("PrimaryLocation") or "").strip()
+        if desc_clean and len(desc_clean) >= 80:
+            return title, desc_clean, comp, loc
+    except Exception as exc:
+        log.warning("Oracle Cloud API extraction failed for %s: %s", url, exc)
+    return None
 
 
 def _ssl_context() -> ssl.SSLContext | None:
@@ -188,6 +249,19 @@ def _ssl_context() -> ssl.SSLContext | None:
 
 
 def _fetch_job_posting(url: str) -> tuple[str, str, str, str]:
+    # Check specialized ATS APIs first
+    oracle_res = _fetch_oracle_cloud_job(url)
+    if oracle_res is not None:
+        return oracle_res
+
+    # Try requests first (handles certifi, connection pooling, and SSL natively)
+    try:
+        resp = requests.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0 (JobHunter)"})
+        if resp.status_code < 400 and resp.text:
+            return _clean_job_html(resp.text)
+    except Exception as exc:
+        log.debug("requests failed to fetch %s: %s; falling back to urlopen", url, exc)
+
     req = UrlRequest(url, headers={"User-Agent": "Mozilla/5.0 (JobHunter)"})
     try:
         with urlopen(req, timeout=20, context=_ssl_context()) as resp:
@@ -502,7 +576,7 @@ def api_artifacts(job_id: str | None = None, limit: int = 100) -> list[dict[str,
 def download(path: str, inline: bool = False):
     """Serve generated artifacts. Restricted to the output directory."""
     target = Path(path).resolve()
-    root = OUTPUT_DIR.resolve()
+    root = output_dir().resolve()
     if not str(target).startswith(str(root)) or not target.is_file():
         raise HTTPException(403, "forbidden")
     if inline and target.suffix.lower() == ".html":

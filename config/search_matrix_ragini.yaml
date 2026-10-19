@@ -1,0 +1,46 @@
+# =============================================================================
+# DAILY SEARCH QUERY MATRIX: Ragini Pathode
+# Targeted at Company Secretarial, Board Governance, Entity Administration & Compliance
+# =============================================================================
+
+target_roles:
+  - Company Secretary
+  - Assistant Company Secretary
+  - Associate Company Secretary
+  - Corporate Secretarial Manager
+  - Corporate Secretarial Lead
+  - Corporate Secretarial Associate
+  - Corporate Governance Manager
+  - Corporate Governance Officer
+  - Legal Entity Management Specialist
+  - Statutory Compliance Specialist
+  - Regulatory Compliance Manager
+  - Secretarial Officer
+  - Board Governance Specialist
+  - Corporate Secretarial Analyst
+
+keyword_seeds:
+  - company secretary
+  - corporate secretarial
+  - board governance
+  - entity management
+  - sebi lodr
+  - statutory compliance
+  - mca filing
+  - corporate governance
+  - diligent
+  - share transfer
+  - minutes drafting
+
+work_modes: [remote, hybrid, onsite]
+
+locations:
+  - Bangalore, India
+  - Bengaluru, India
+  - Mumbai, India
+  - Pune, India
+  - Hyderabad, India
+  - Gurgaon, India
+  - Delhi NCR, India
+  - India
+  - Remote
