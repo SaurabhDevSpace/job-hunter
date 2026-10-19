@@ -18,10 +18,14 @@ sleep 1
 "$CLOUDFLARED" tunnel --url http://127.0.0.1:8081 > /tmp/tunnel_ragini.log 2>&1 &
 
 echo "Waiting for public HTTPS URLs..."
-sleep 5
-
-ASHWINI_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' /tmp/tunnel_ashwini.log | head -1)
-RAGINI_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' /tmp/tunnel_ragini.log | head -1)
+for i in {1..12}; do
+  ASHWINI_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' /tmp/tunnel_ashwini.log 2>/dev/null | head -1)
+  RAGINI_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' /tmp/tunnel_ragini.log 2>/dev/null | head -1)
+  if [ -n "$ASHWINI_URL" ] && [ -n "$RAGINI_URL" ]; then
+    break
+  fi
+  sleep 1
+done
 
 echo "=================================================="
 echo " Ashwini Portal : $ASHWINI_URL"
