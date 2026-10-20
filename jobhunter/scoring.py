@@ -88,7 +88,7 @@ def classify_title(title: str, profile: Profile | None = None) -> tuple[str, flo
     is_legal_or_cs = False
     if profile:
         profile_text = f"{profile.name} {profile.headline} {' '.join(c.name for c in profile.competencies)}".lower()
-        if any(k in profile_text for k in ["secretar", "company secretary", "governance", "compliance", "law", "ll.b"]):
+        if any(k in profile_text for k in ["company secretary", "secretarial", "legal counsel", "cs executive", "ll.b", "advocate"]):
             is_legal_or_cs = True
 
     if is_legal_or_cs:
@@ -112,6 +112,28 @@ def classify_title(title: str, profile: Profile | None = None) -> tuple[str, flo
             return "core", 18.0
         if re.search(r"\b(compliance|legal|regulatory|paralegal|law|contract\w*|due diligence|"
                      r"corporate affairs|governance|statutory)\b", t, re.I):
+            return "adjacent", 10.5
+
+    is_data_or_bi = False
+    if profile:
+        hl = (profile.headline or "").lower()
+        if any(k in hl for k in ["data analyst", "bi developer", "business intelligence", "tableau", "power bi", "data scientist", "data engineer"]):
+            is_data_or_bi = True
+
+    if is_data_or_bi:
+        data_disqualify = re.compile(
+            r"\b(nurse|physician|driver|technician|electrician|welder|chef|barista|cashier|security guard|"
+            r"attorney|lawyer|paralegal|dentist|pharmacist|civil engineer|mechanical engineer|"
+            r"chemical engineer|copywriter|content writer|social media|recruiter|sales representative|sdr|bdr)\b", re.I)
+        if data_disqualify.search(t):
+            return "off-target", 0.0
+
+        if re.search(r"\b(data analyst|bi developer|business intelligence|tableau|power bi|"
+                     r"analytics manager|reporting analyst|data engineering|bi engineer|"
+                     r"decision science|sql developer|analytics consultant|bi lead)\b", t, re.I):
+            return "core", 18.0
+        if re.search(r"\b(analyst|analytics|data|intelligence|reporting|insights|"
+                     r"engineer|consultant|developer|database|etl|pipeline)\b", t, re.I):
             return "adjacent", 10.5
 
     if TITLE_DISQUALIFY.search(t):

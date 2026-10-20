@@ -1,0 +1,95 @@
+# =============================================================================
+# DAILY SEARCH QUERY MATRIX: Vaibhav Bramhankar
+# Roles: Senior Data Analyst, BI Developer, Tableau & Power BI Specialist
+# =============================================================================
+
+target_roles:
+  - Senior Data Analyst
+  - Lead Data Analyst
+  - Business Intelligence Developer
+  - Power BI Developer
+  - Tableau Developer
+  - BI Analyst
+  - Data Analytics Manager
+  - Data Modeling & BI Engineer
+  - Enterprise Reporting Analyst
+  - Financial Data Analyst
+  - Lending Analytics Specialist
+  - Product Analytics Manager
+
+keyword_seeds:
+  - data analyst
+  - business intelligence
+  - tableau
+  - power bi
+  - sql
+  - dax
+  - sas
+  - etl
+  - data mart
+  - data analytics
+  - dashboard
+  - reporting
+  - lending analytics
+  - banking analytics
+
+work_modes: [remote, hybrid]
+
+locations:
+  - Mumbai, India
+  - India
+  - Remote
+  - Worldwide
+  - Pune, India
+  - Bangalore, India
+  - Gurgaon, India
+  - Hyderabad, India
+
+jobspy:
+  enabled: true
+  sites: [linkedin, indeed]
+  blocked_without_proxy: [zip_recruiter, naukri, glassdoor, google]
+  proxies: []
+  results_wanted: 25
+  hours_old: 72
+  country_indeed: India
+  is_remote: true
+  locations: ["Mumbai, India", "India", "Remote, India"]
+
+ycombinator:
+  enabled: true
+  roles: [data, analytics, engineering]
+
+ats:
+  greenhouse:
+    - stripe
+    - databricks
+    - airtable
+    - gitlab
+    - flexport
+    - instacart
+    - samsara
+    - sigmacomputing
+    - cockroachlabs
+    - grafanalabs
+    - zscaler
+  lever:
+    - figma
+    - retool
+    - postman
+    - brex
+    - netlify
+    - cursor
+  ashby:
+    - linear
+    - ramp
+    - modal
+    - replicate
+    - perplexity
+    - mistral
+  smartrecruiters:
+    - visa
+    - square
+    - block
+  workable:
+    - bolt

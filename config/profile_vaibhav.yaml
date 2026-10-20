@@ -1,0 +1,213 @@
+# =============================================================================
+# CANDIDATE GROUND-TRUTH PROFILE: Vaibhav Bramhankar
+# Baseline: Vaibhav Bramhankar Resume 2025.pdf & tailored resumes in Downloads.
+# Professional Profile for Data Analysis, Business Intelligence & BI Engineering.
+# =============================================================================
+
+name: Vaibhav Bramhankar
+headline: SENIOR DATA ANALYST | BI DEVELOPER | TABLEAU & POWER BI | DATA ENGINEERING
+current_title: Senior Data Analyst, Mashreq Bank
+location: Mumbai, Maharashtra, India
+email: vaibhav.bramhankar@gmail.com
+phone: "+91-9021056858"
+linkedin: "https://www.linkedin.com/in/vaibhav-bramhankar"
+years_experience: 9
+
+summary: >-
+  Senior Data Analyst and Business Intelligence Specialist with nearly 9 years of experience
+  across premier banking and financial institutions (Mashreq Bank, Jio Payments Bank). Proven
+  techno-functional leader driving SAS data migration architectures, Winnow AXS loan acquisition
+  delivery, enterprise Power BI datasets, advanced DAX modeling, and retail customer funnel analytics.
+  Combines data mart design and robust ETL staging pipelines with AI-assisted workflow optimization,
+  delivering measurable cost efficiency, risk mitigation, and top-tier performance ratings.
+
+competencies:
+  - name: Business Intelligence & Data Visualization
+    weight: 10
+    aliases: [business intelligence, bi, bi developer, bi development, tableau, power bi,
+              dashboard, dashboards, dashboarding, data visualization, visualization,
+              data storytelling, reporting, mis reporting, kpi reporting, lod, level of detail,
+              calculated fields, dax, power query]
+  - name: Data Engineering & SAS Migration
+    weight: 10
+    aliases: [sas, sas migration, data engineering, data mart, data mart design, staging architecture,
+              fact tables, dimension tables, workflow data pipelines, etl, dwh, data warehousing,
+              data modeling, olap, oltp]
+  - name: Transactional, Lending & Funnel Analytics
+    weight: 10
+    aliases: [data analysis, loan onboarding, funnel drop-off, mortgage, personal loan,
+              winnow axs, tat, dpd, turnaround time, days past due, customer analytics,
+              transaction analytics, upi, aeps, kyc, customer segmentation, cross-selling]
+  - name: SQL & Large-Scale Data Querying
+    weight: 10
+    aliases: [sql, structured query language, ms sql, ms-sql, sql server, complex queries,
+              stored procedures, joins, subqueries, aggregations, window functions,
+              large-scale datasets, database querying]
+  - name: AI-Assisted Workflows & Automation
+    weight: 9
+    aliases: [python, pandas, numpy, automation, process automation, email automation,
+              ai-assisted workflows, code parsing, prompt engineering, generative ai,
+              vba, macros, scripting, workflow automation]
+  - name: Regulatory Compliance & Risk Monitoring
+    weight: 9
+    aliases: [regulatory compliance, risk monitoring, aml, audit, audit reporting, fraud detection,
+              transaction limits, anomaly detection, threshold monitoring, suspicious activity]
+  - name: Techno-Functional Leadership & Agile Delivery
+    weight: 8
+    aliases: [techno-functional, spoc, brd, fsd, requirements analysis, data mapping,
+              agile, scrum, sdlc, jira, sprint ceremonies, stakeholder management,
+              solution reviews, uat support, release planning, production deployments]
+
+seniority:
+  target_levels: [senior, lead, manager]
+  ideal_yoe_range: [7, 13]
+  reject_levels: [intern, trainee, apprentice, fresher]
+
+education:
+  - degree: Master of Business Administration (M.B.A.)
+    institution: ITM University
+    location: Mumbai, India
+    dates: "2014 – 2016"
+  - degree: Bachelor of Engineering (B.E.)
+    institution: RTM Nagpur University
+    location: Nagpur, India
+    dates: "2009 – 2013"
+
+experience:
+  - company: Mashreq Bank
+    title: Senior Data Analyst
+    location: Mumbai, India
+    start: 2024-01
+    end: null
+    dates: 2024 – Present
+    bullets:
+      - text: Single-handedly managed and executed the end-to-end SAS migration project, performing advanced data engineering scripting to build zero-impact staging-table architectures for enterprise Fact, Dimension, and Workflow data pipelines.
+        tags: [Data Engineering & SAS Migration, SQL & Large-Scale Data Querying]
+      - text: Leading techno-functional delivery across Mortgage and Personal Loan acquisition initiatives for the strategic Winnow AXS platform, acting as the central SPOC coordinating directly with cross-functional business and technical teams.
+        tags: [Techno-Functional Leadership & Agile Delivery, Transactional, Lending & Funnel Analytics]
+      - text: Driving business requirement analysis, complex data mapping, data mart design, and stakeholder management; authored comprehensive BRD and FSD documentation for over 50 critical acquisition variables.
+        tags: [Techno-Functional Leadership & Agile Delivery, Data Engineering & SAS Migration]
+      - text: Executed advanced data analytics to drive business expansion, investigating funnel drop-off ratios to optimize loan onboarding workflows and unlock targeted cross-selling opportunities across retail products.
+        tags: [Transactional, Lending & Funnel Analytics, Business Intelligence & Data Visualization]
+      - text: Spearheaded continuous enhancement of Power BI self-service datasets and restructured underlying tables to build a cohesive enterprise data model, formulating advanced DAX logic for key metrics (TAT, DPD) to monitor operational efficiency and portfolio risk.
+        tags: [Business Intelligence & Data Visualization, Data Engineering & SAS Migration]
+      - text: Acting as a bridge between business and engineering teams to ensure end-to-end delivery of scalable, reusable, governed data models across agile releases, UAT, and production deployments.
+        tags: [Techno-Functional Leadership & Agile Delivery]
+      - text: Drove process optimization by embedding AI-assisted workflows for logic decomposition, code parsing, and test-case formulation, reducing script conversion turnaround times by 25%.
+        tags: [AI-Assisted Workflows & Automation, Process Automation & Scripting]
+
+  - company: Jio Payments Bank Ltd.
+    title: Manager | Tableau Developer | Power BI Developer | BI Analyst
+    location: Mumbai, India
+    start: 2022-07
+    end: 2024-01
+    dates: July 2022 – 2024
+    bullets:
+      - text: Analyzed daily high-volume transactional data across UPI, AEPS, DMR, savings, and current accounts to uncover customer behavior patterns, detect anomalies, and guide data-informed product strategies.
+        tags: [Transactional, Lending & Funnel Analytics, Business Intelligence & Data Visualization]
+      - text: Monitored regulatory transaction thresholds and flagged suspicious activity patterns to support AML controls, risk mitigation, and routine audit reporting.
+        tags: [Regulatory Compliance & Risk Monitoring]
+      - text: Conducted customer segmentation and onboarding funnel analysis that improved digital KYC completion rates and streamlined user journey workflows.
+        tags: [Transactional, Lending & Funnel Analytics, Process Automation & Scripting]
+      - text: Designed, deployed, and maintained interactive Tableau and Power BI dashboards delivering executive-level visibility into transaction volumes, retention metrics, and revenue/commission structures.
+        tags: [Business Intelligence & Data Visualization]
+      - text: Queried multi-million row datasets via SQL and developed automated Python scripts (Pandas, NumPy) for scheduled email reporting, cutting manual reporting overhead by over 40%.
+        tags: [SQL & Large-Scale Data Querying, AI-Assisted Workflows & Automation]
+      - text: Prepared and delivered strategic performance and MIS reports to senior leadership, highlighting business health, product uptake, and operational risk metrics.
+        tags: [Business Intelligence & Data Visualization, Techno-Functional Leadership & Agile Delivery]
+
+  - company: Grayradiant Data Service / Wab IT Software Pvt. Ltd.
+    title: Data Analyst | Tableau Developer
+    location: Pune / Mumbai, India
+    start: 2017-12
+    end: 2022-07
+    dates: December 2017 – July 2022
+    bullets:
+      - text: Built enterprise Tableau dashboards using advanced charts (bar, line, scatter, geospatial maps, heat maps, and Gantt charts) to communicate critical business metrics to stakeholders.
+        tags: [Business Intelligence & Data Visualization]
+      - text: Implemented complex Level of Detail (LOD) expressions, table calculations, parameter actions, and set actions to enable responsive multi-tier drill-down analytics.
+        tags: [Business Intelligence & Data Visualization]
+      - text: Structured Tableau workbooks for YTD, QTD, MTD, and YoY performance tracking, enabling executive leadership to evaluate regional sales performance and market trends.
+        tags: [Business Intelligence & Data Visualization, Transactional & Customer Analytics]
+      - text: Managed ETL workflows, data extraction, and warehouse optimization across OLAP/OLTP datasets to ensure seamless data integration and robust BI reporting integrity.
+        tags: [Data Engineering & Warehousing, SQL & Large-Scale Data Querying]
+      - text: Participated in Agile/Scrum ceremonies, translating business requirements into JIRA user stories and delivering iterative dashboard enhancements throughout the SDLC.
+        tags: [Agile Delivery & Stakeholder Communication]
+
+projects:
+  - id: winnow-axs-loan-platform
+    name: Winnow AXS Retail Loan Acquisition & Funnel Analytics
+    company: Mashreq Bank
+    bullets:
+      - "Led techno-functional delivery and BRD/FSD authoring for 50+ variables across Mortgage and Personal Loan acquisition, optimizing funnel conversion and TAT/DPD metrics."
+    stack: [Winnow AXS, Power BI, Advanced DAX, SQL, Agile/JIRA]
+  - id: sas-migration-staging-pipeline
+    name: Enterprise SAS Migration & Zero-Impact Staging Architecture
+    company: Mashreq Bank
+    bullets:
+      - "Executed end-to-end SAS migration to modern data pipelines, developing zero-impact staging architectures for enterprise Fact, Dimension, and Workflow data marts."
+    stack: [SAS, SQL, Data Engineering, ETL, Enterprise Data Modeling]
+  - id: sales-analysis-dashboard
+    name: Pan-India Regional Sales Analysis Dashboard
+    company: Grayradiant Data Service
+    bullets:
+      - "Developed interactive Tableau dashboards analyzing state- and city-level sales performance, profit margins, and cohort trends across India, guiding regional marketing strategies."
+    stack: [Tableau, MS Excel, SQL, JIRA]
+  - id: consumer-complaints-analysis
+    name: Financial Consumer Complaints Benchmarking Dashboard
+    company: Grayradiant Data Service
+    bullets:
+      - "Designed MS-SQL and Tableau dashboards benchmarking consumer complaint resolution times and closure rates across US financial institutions to support service improvement."
+    stack: [Tableau, MS-SQL Server, JIRA]
+
+skills:
+  Business Intelligence & Visualization:
+    - Power BI
+    - Tableau (Desktop & Public)
+    - Advanced DAX
+    - Power Query & Data Modeling
+    - Advanced Excel
+    - Executive Dashboards & MIS
+  Data Engineering & Architecture:
+    - SAS Migration & Scripting
+    - Data Mart & Staging Table Design
+    - Fact, Dimension & Workflow Pipelines
+    - SQL (MS-SQL Server)
+    - Data Warehousing (OLAP / OLTP)
+    - ETL Pipelines & Optimization
+  Domain & Lending Analytics:
+    - Mortgage & Personal Loan Acquisition
+    - Winnow AXS Platform Delivery
+    - Funnel Drop-off & Conversion Analysis
+    - Operational Metrics (TAT, DPD)
+    - Digital Payments (UPI, AEPS, DMR)
+    - AML & Regulatory Risk Monitoring
+  Programming & AI Automation:
+    - Python (Pandas, NumPy, Matplotlib)
+    - AI-Assisted Workflows (Logic Decomposition & Code Parsing)
+    - Generative AI & Prompt Engineering
+    - VBA / Macros & Automated Email Pipelines
+  Methodologies & Leadership:
+    - Techno-Functional Leadership (SPOC)
+    - BRD & FSD Authoring
+    - Agile / Scrum Delivery
+    - UAT, Release Planning & Production Deployment
+    - JIRA & Git
+
+certifications:
+  - "Data Storytelling with Power BI – Edureka (Credential ID: 267CTHBXN6XN | Issued: Jun 2024)"
+  - "Introduction to Generative AI – Coursera (Credential ID: 5HUB5KAL6P6V | Issued: May 2024)"
+  - "Foundations: Data, Data, Everywhere – Coursera (Credential ID: 7KEENXP6M494 | Issued: Mar 2024)"
+  - "Scrum Foundation Professional Certification"
+  - "SQL Basic & Intermediate Certification"
+
+achievements:
+  - "Awarded 'Significantly Exceeds Expectations (SE)' rating for three consecutive years at Jio Payments Bank Ltd."
+  - "Earned multiple performance awards recognizing contributions to process automation, fraud prevention, and operational cost efficiency."
+  - "Identified transaction limit breaches and suspicious transaction patterns, mitigating financial and regulatory risk exposure."
+  - "Built Python email automation workflows that eliminated recurring manual reporting effort and accelerated data delivery by 40%+."
+  - "Developed analytical optimization models delivering tangible operational cost savings across business units."
+
+languages: [English, Hindi, Marathi]
+personal_details:
+  date_of_birth: "1990-10-19"
