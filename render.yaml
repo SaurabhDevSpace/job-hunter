@@ -1,0 +1,68 @@
+services:
+  # ---------------------------------------------------------------------------
+  # Ashwini Portal (Port 8080)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: jobhunter-ashwini
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: JOBHUNTER_PROFILE
+        value: "config/profile.yaml"
+      - key: JOBHUNTER_SEARCH_MATRIX
+        value: "config/search_matrix.yaml"
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: CLINE_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        value: "https://sfrhhjgtqljxppvjgqog.supabase.co"
+      - key: SUPABASE_BUCKET
+        value: "resumes"
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: TURSO_DATABASE_URL
+        value: "libsql://jobhunter-saurabhdevspace.aws-ap-south-1.turso.io"
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+
+  # ---------------------------------------------------------------------------
+  # Ragini Portal (Port 8081)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: jobhunter-ragini
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "8080" # Render internal port is always standardized per container
+      - key: JOBHUNTER_PROFILE
+        value: "config/profile_ragini.yaml"
+      - key: JOBHUNTER_SEARCH_MATRIX
+        value: "config/search_matrix_ragini.yaml"
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: CLINE_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        value: "https://sfrhhjgtqljxppvjgqog.supabase.co"
+      - key: SUPABASE_BUCKET
+        value: "resumes"
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: TURSO_DATABASE_URL
+        value: "libsql://jobhunter-ragini-saurabhdevspace.aws-ap-south-1.turso.io"
+      - key: TURSO_AUTH_TOKEN
+        sync: false

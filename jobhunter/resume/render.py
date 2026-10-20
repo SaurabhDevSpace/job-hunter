@@ -568,4 +568,15 @@ def render_all(resume: TailoredResume, profile: Profile, job: Job,
     payload = {"job": job.to_dict(), "resume": resume.to_dict()}
     paths["json"].write_text(_json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     written["json"] = paths["json"]
+
+    # Upload to cloud storage (Supabase Storage) if configured
+    try:
+        from ..storage import is_cloud_storage_enabled, upload_artifact
+        if is_cloud_storage_enabled():
+            for kind, p in list(written.items()):
+                subpath = f"{slug(profile.name)}/{datetime.now().strftime('%Y-%m-%d')}/{p.name}"
+                upload_artifact(p, subpath)
+    except Exception:
+        pass
+
     return written

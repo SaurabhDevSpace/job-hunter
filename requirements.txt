@@ -23,3 +23,7 @@ python-jobspy>=1.1.80
 weasyprint>=62.0
 # Reads the generated PDF back to confirm no content was silently truncated.
 pypdf>=4.0
+
+# --- cloud persistence & storage ---
+certifi>=2024.2
+libsql-client>=0.3.0

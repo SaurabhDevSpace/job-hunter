@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+config/.*_env
 *.zip
 env-backup*
 data/
