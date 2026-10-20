@@ -18,11 +18,26 @@
     "min_context_length": 16000,
     "require_json_mode_for_parse": true,
     "pinned_models": {
-      "parse": [],
-      "match": [],
-      "resume": []
+      "parse": [
+        "minimax/minimax-m3.1-flash:free",
+        "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "nvidia/nemotron-3.5-super-vl:free"
+      ],
+      "match": [
+        "minimax/minimax-m3.1-flash:free",
+        "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "google/gemma-4-31b-it:free"
+      ],
+      "resume": [
+        "minimax/minimax-m3.1-flash:free",
+        "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "nvidia/nemotron-3.5-lightning:free"
+      ]
     },
-    "blocklist": []
+    "blocklist": [
+      "nvidia/nemotron-3-super-120b-a12b:free",
+      "thinkingmachines/inkling-small:free"
+    ]
   },
   "task_params": {
     "parse": {

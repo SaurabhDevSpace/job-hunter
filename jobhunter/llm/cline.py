@@ -44,7 +44,12 @@ BASE_URL = "https://api.cline.bot/api/v1"
 
 # Verified free (cost 0, is_byok) *and* reliably strict-JSON capable; other
 # UI-advertised "free" models either bill or are blocked outside Cline's editor.
-CLINE_DEFAULT_MODELS = ["poolside/laguna-s-2.1:free", "stepfun/step-3.7-flash"]
+CLINE_DEFAULT_MODELS = [
+    "google/gemma-4-31b-it",
+    "minimax/minimax-m3.1-flash",
+    "poolside/laguna-s-2.1:free",
+    "stepfun/step-3.7-flash",
+]
 CLINE_DEFAULT_DAILY_CAP = 100
 
 # Own ledger table so Cline usage can never be confused with, or accounted
