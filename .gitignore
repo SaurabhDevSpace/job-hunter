@@ -6,6 +6,7 @@ config/.*_env
 env-backup*
 data/
 data_ragini/
+data_vaibhav/
 *.sqlite3
 __pycache__/
 *.py[cod]

@@ -211,3 +211,13 @@ achievements:
 languages: [English, Hindi, Marathi]
 personal_details:
   date_of_birth: "1990-10-19"
+
+preferences:
+  work_modes: [remote, hybrid, onsite]
+  locations:
+    - Mumbai, India
+    - Pune, India
+    - Nagpur, India
+    - Bangalore, India
+    - India
+    - Remote

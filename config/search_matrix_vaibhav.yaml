@@ -33,28 +33,28 @@ keyword_seeds:
   - lending analytics
   - banking analytics
 
-work_modes: [remote, hybrid]
+work_modes: [remote, hybrid, onsite]
 
 locations:
   - Mumbai, India
+  - Pune, India
+  - Nagpur, India
+  - Bangalore, India
   - India
   - Remote
   - Worldwide
-  - Pune, India
-  - Bangalore, India
-  - Gurgaon, India
-  - Hyderabad, India
 
 jobspy:
   enabled: true
   sites: [linkedin, indeed]
   blocked_without_proxy: [zip_recruiter, naukri, glassdoor, google]
   proxies: []
+  max_terms: 4
   results_wanted: 25
-  hours_old: 72
+  hours_old: 168
   country_indeed: India
-  is_remote: true
-  locations: ["Mumbai, India", "India", "Remote, India"]
+  is_remote: false
+  locations: ["Mumbai, India", "Pune, India", "Nagpur, India", "India"]
 
 ycombinator:
   enabled: true
@@ -73,23 +73,81 @@ ats:
     - cockroachlabs
     - grafanalabs
     - zscaler
+    - twilio
+    - mongodb
+    - checkr
+    - canonical
+    - elastic
+    - remote
+    - postman
+    - mozilla
+    - dropbox
+    - turing
+    - customerio
+    - wikimedia
+    - bitwarden
+    - builtin
   lever:
+    - spotify
+    - mistplay
+    - toptal
+    - angellist
     - figma
     - retool
-    - postman
     - brex
     - netlify
     - cursor
   ashby:
-    - linear
+    - openai
     - ramp
+    - linear
+    - notion
+    - vanta
+    - supabase
+    - camunda
+    - redis
+    - revenuecat
+    - andela
+    - zapier
+    - posthog
+    - helpscout
+    - close
+    - atlan
+    - kit
+    - buffer
     - modal
     - replicate
     - perplexity
     - mistral
   smartrecruiters:
+    - freshworks
+    - whatfix
     - visa
     - square
     - block
   workable:
+    - trailofbits
     - bolt
+  recruitee:
+    - mailerlite
+  workday:
+    - name: Accenture
+      host: https://accenture.wd103.myworkdayjobs.com
+      tenant: accenture
+      site: AccentureCareers
+    - name: Deloitte India
+      host: https://deloitteus.wd1.myworkdayjobs.com
+      tenant: deloitteus
+      site: Deloitte_US_External_Careers
+    - name: Salesforce
+      host: https://salesforce.wd12.myworkdayjobs.com
+      tenant: salesforce
+      site: External_Career_Site
+    - name: Nvidia
+      host: https://nvidia.wd5.myworkdayjobs.com
+      tenant: nvidia
+      site: NVIDIAExternalCareerSite
+    - name: Dell
+      host: https://dell.wd1.myworkdayjobs.com
+      tenant: dell
+      site: External
