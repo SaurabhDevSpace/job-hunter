@@ -1,25 +1,32 @@
-primary_region = "sin"
+# fly.toml app configuration file generated for jobhunter-ragini on 2026-10-19T08:07:24Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'jobhunter-ragini'
+primary_region = 'sin'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [env]
-  JOBHUNTER_DB = "/data/jobhunter.sqlite3"
-  PORT = "8080"
+  JOBHUNTER_DB = '/data/jobhunter.sqlite3'
+  PORT = '8080'
 
-[mounts]
-  source = "jobhunter_data"
-  destination = "/data"
+[[mounts]]
+  source = 'jobhunter_data'
+  destination = '/data'
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = false
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
-  processes = ["app"]
+  processes = ['app']
 
 [[vm]]
-  memory = "1gb"
-  cpu_kind = "shared"
+  memory = '1gb'
+  cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 1024
