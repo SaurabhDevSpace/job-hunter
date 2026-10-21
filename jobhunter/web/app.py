@@ -357,6 +357,15 @@ def _tailor_custom(payload: dict[str, Any]) -> dict[str, Any]:
 
     out = pipe.tailor(job, score, with_cover_letter=False, use_llm=use_llm, analysis=parsed)
     resume = out["resume"]
+
+    # Replicate custom tailoring to Turso cloud DB
+    try:
+        from ..turso import push_to_turso
+        with pipe.store.conn() as c:
+            push_to_turso(c)
+    except Exception:
+        pass
+
     return {
         "job_id": score.job_id,
         "generated_by": resume.generated_by,

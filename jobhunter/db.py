@@ -122,6 +122,16 @@ class Store:
         self.path = str(path or db_path())
         with self.conn() as c:
             c.executescript(SCHEMA)
+            # If Turso is configured, restore remote data on boot if local database is empty
+            row_count = c.execute("SELECT count(*) as cnt FROM jobs").fetchone()["cnt"]
+            if row_count == 0:
+                try:
+                    from .turso import pull_from_turso
+                    restored = pull_from_turso(c)
+                    if restored:
+                        log.info("Restored %d records from Turso cloud database on startup", restored)
+                except Exception as exc:
+                    log.warning("Turso startup restore skipped: %s", exc)
 
     @contextmanager
     def conn(self) -> Iterator[sqlite3.Connection]:

@@ -326,6 +326,13 @@ class Pipeline:
                 status="failed" if run_failed else "completed",
                 notes="; ".join(report.errors)[:1000] or None,
             )
+            # Sync to Turso cloud DB so results survive Render restarts
+            try:
+                from .turso import push_to_turso
+                with self.store.conn() as c:
+                    push_to_turso(c)
+            except Exception as e:
+                log.warning("Turso sync at run end failed: %s", e)
             log.info("=== daily run %s finished: %d found, %d new, %d resumes ===",
                      report.run_id, report.jobs_found, report.jobs_new, report.resumes_built)
 

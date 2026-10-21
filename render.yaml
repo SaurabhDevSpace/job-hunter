@@ -66,3 +66,37 @@ services:
         value: "libsql://jobhunter-ragini-saurabhdevspace.aws-ap-south-1.turso.io"
       - key: TURSO_AUTH_TOKEN
         sync: false
+
+  # ---------------------------------------------------------------------------
+  # Vaibhav Portal (Port 8082)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: jobhunter-vaibhav
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: JOBHUNTER_PROFILE
+        value: "config/profile_vaibhav.yaml"
+      - key: JOBHUNTER_SEARCH_MATRIX
+        value: "config/search_matrix_vaibhav.yaml"
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: CLINE_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        value: "https://sfrhhjgtqljxppvjgqog.supabase.co"
+      - key: SUPABASE_BUCKET
+        value: "resumes"
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: TURSO_DATABASE_URL
+        value: "libsql://jobhunter-vaibhav-saurabhdevspace.aws-ap-south-1.turso.io"
+      - key: TURSO_AUTH_TOKEN
+        sync: false
