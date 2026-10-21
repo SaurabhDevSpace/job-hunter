@@ -16,12 +16,14 @@ import certifi
 
 log = logging.getLogger("jobhunter.turso")
 
-TURSO_URL = os.getenv("TURSO_DATABASE_URL", "").strip()
-TURSO_TOKEN = os.getenv("TURSO_AUTH_TOKEN", "").strip()
+
+def get_turso_config() -> tuple[str, str]:
+    return os.getenv("TURSO_DATABASE_URL", "").strip(), os.getenv("TURSO_AUTH_TOKEN", "").strip()
 
 
 def is_turso_enabled() -> bool:
-    return bool(TURSO_URL and TURSO_TOKEN)
+    url, token = get_turso_config()
+    return bool(url and token)
 
 
 def _hrana_pipeline_url(url: str) -> str:
@@ -31,10 +33,11 @@ def _hrana_pipeline_url(url: str) -> str:
     return cleaned
 
 
-def execute_turso_pipeline(stmts_with_args: list[tuple[str, list[Any] | None]], timeout: int = 25) -> bool:
-    if not is_turso_enabled():
+def execute_turso_pipeline(stmts_with_args: list[tuple[str, list[Any] | None]], timeout: int = 15) -> bool:
+    url, token = get_turso_config()
+    if not (url and token):
         return False
-    endpoint = _hrana_pipeline_url(TURSO_URL)
+    endpoint = _hrana_pipeline_url(url)
     requests = []
     for sql, args in stmts_with_args:
         req_entry: dict[str, Any] = {"type": "execute", "stmt": {"sql": sql}}
@@ -57,7 +60,7 @@ def execute_turso_pipeline(stmts_with_args: list[tuple[str, list[Any] | None]], 
     try:
         body = json.dumps({"requests": requests}).encode()
         headers = {
-            "Authorization": f"Bearer {TURSO_TOKEN}",
+            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         }
         ctx = ssl.create_default_context(cafile=certifi.where())
@@ -74,24 +77,25 @@ def execute_turso_pipeline(stmts_with_args: list[tuple[str, list[Any] | None]], 
         return False
 
 
-def pull_from_turso(local_conn: sqlite3.Connection) -> int:
+def pull_from_turso(local_conn: sqlite3.Connection, timeout: int = 15) -> int:
     """Pull remote Turso jobs, scores, and artifacts into local SQLite on startup.
-    Returns number of records restored.
+    Returns number of records restored. Safe and non-blocking with tight timeout.
     """
-    if not is_turso_enabled():
+    url, token = get_turso_config()
+    if not (url and token):
         return 0
-    endpoint = _hrana_pipeline_url(TURSO_URL)
+    endpoint = _hrana_pipeline_url(url)
     tables = ["jobs", "scores", "artifacts", "runs"]
     requests = [{"type": "execute", "stmt": {"sql": f"SELECT * FROM {tbl}"}} for tbl in tables]
     try:
         body = json.dumps({"requests": requests}).encode()
         headers = {
-            "Authorization": f"Bearer {TURSO_TOKEN}",
+            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         }
         ctx = ssl.create_default_context(cafile=certifi.where())
         req = urllib.request.Request(endpoint, data=body, headers=headers, method="POST")
-        with urllib.request.urlopen(req, context=ctx, timeout=30) as resp:
+        with urllib.request.urlopen(req, context=ctx, timeout=timeout) as resp:
             data = json.loads(resp.read().decode())
     except Exception as exc:
         log.warning("Failed to pull data from Turso on startup: %s", exc)
@@ -170,7 +174,7 @@ def push_to_turso(local_conn: sqlite3.Connection) -> int:
     success_count = 0
     for i in range(0, len(stmts_to_send), chunk_size):
         chunk = stmts_to_send[i:i + chunk_size]
-        if execute_turso_pipeline(chunk, timeout=40):
+        if execute_turso_pipeline(chunk, timeout=30):
             success_count += len(chunk)
 
     log.info("Synchronized %d records to Turso cloud database", success_count)

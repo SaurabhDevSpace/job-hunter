@@ -80,8 +80,17 @@ def _shutdown() -> None:
         _scheduler.shutdown(wait=False)
 
 
+_global_store: Store | None = None
+_global_store_lock = threading.Lock()
+
+
 def store() -> Store:
-    return Store()
+    global _global_store
+    if _global_store is None:
+        with _global_store_lock:
+            if _global_store is None:
+                _global_store = Store()
+    return _global_store
 
 
 DOWNLOAD_LABELS = {
@@ -403,29 +412,43 @@ def dashboard(request: Request,
               min_score: float = Query(0), tier: str | None = None,
               mode: str | None = None, source: str | None = None,
               q: str | None = None, hidden: bool = False, limit: int = 120):
-    st = store()
-    jobs = st.list_jobs(min_score=min_score, tier=tier, work_mode=mode, source=source,
-                        hidden_only=hidden, query=q, limit=limit)
-    jobs = _india_permissible_jobs(jobs)
-    cfg = load_model_config()
-    client = OpenRouterClient(cfg)
-    stats = st.stats()
-    # Filter dropdown must reflect the *actual* distinct source values stored on jobs
-    # (e.g. jobspy fans out into "linkedin"/"indeed"/"glassdoor"), not the connector
-    # registry keys — those don't line up 1:1 with what ends up in the DB.
-    db_sources = sorted({row["source"] for row in stats["sources"] if row["source"]})
+    try:
+        st = store()
+        jobs = st.list_jobs(min_score=min_score, tier=tier, work_mode=mode, source=source,
+                            hidden_only=hidden, query=q, limit=limit)
+        jobs = _india_permissible_jobs(jobs)
+    except Exception as exc:
+        log.exception("Error loading jobs for dashboard: %s", exc)
+        jobs = []
+
+    try:
+        cfg = load_model_config()
+        client = OpenRouterClient(cfg)
+        stats = store().stats()
+        db_sources = sorted({row["source"] for row in stats.get("sources", []) if row.get("source")})
+        runs = store().runs(8)
+        artifacts = store().artifacts(limit=25)
+    except Exception as exc:
+        log.exception("Error loading secondary dashboard stats: %s", exc)
+        cfg = None
+        client = None
+        stats = {"total_jobs": len(jobs), "sources": []}
+        db_sources = []
+        runs = []
+        artifacts = []
+
     return TEMPLATES.TemplateResponse(request, "dashboard.html", {
         "profile": load_profile(),
         "jobs": jobs,
         "match_count": len(jobs),
-        "budget": client.budget_state() if client.enabled else None,
+        "budget": client.budget_state() if (client and client.enabled) else None,
         "stats": stats,
-        "runs": st.runs(8),
-        "artifacts": st.artifacts(limit=25),
+        "runs": runs,
+        "artifacts": artifacts,
         "last_report": last_report(),
         "running": is_running(),
-        "llm_ready": bool(cfg.api_key),
-        "model_chain": {t: cfg.chain_for(t)[:4] for t in ("parse", "match", "resume")},
+        "llm_ready": bool(cfg and cfg.api_key),
+        "model_chain": {t: cfg.chain_for(t)[:4] for t in ("parse", "match", "resume")} if cfg else {},
         "sources": db_sources,
         "filters": {"min_score": min_score, "tier": tier or "", "mode": mode or "",
                     "source": source or "", "q": q or "", "hidden": hidden, "limit": limit},
