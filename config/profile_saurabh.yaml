@@ -213,7 +213,10 @@ patents:
   - Automatic Suppression of Non-actionable Network Alarms using Machine Learning
 
 languages: [English, Marathi, Hindi]
-preferences: {}
+preferences:
+  work_modes: [remote, hybrid, onsite]
+  locations: [Pune, Bangalore, Bengaluru, Mumbai, Hyderabad, Gurgaon, Delhi NCR, Remote - India, Worldwide Remote]
+  exclude_keywords: [unpaid, commission only, field sales, door to door, tele-caller, bpo voice]
 agentic_stack_evidence:
   implemented_in_reviewed_projects:
     - "LangGraph: bounded planning, approval gates, persistent state and optional worker subgraphs."

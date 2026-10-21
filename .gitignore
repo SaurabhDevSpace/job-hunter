@@ -7,6 +7,7 @@ env-backup*
 data/
 data_ragini/
 data_vaibhav/
+data_saurabh/
 *.sqlite3
 __pycache__/
 *.py[cod]

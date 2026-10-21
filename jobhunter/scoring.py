@@ -130,10 +130,11 @@ def classify_title(title: str, profile: Profile | None = None) -> tuple[str, flo
 
         if re.search(r"\b(data analyst|bi developer|business intelligence|tableau|power bi|"
                      r"analytics manager|reporting analyst|data engineering|bi engineer|"
-                     r"decision science|sql developer|analytics consultant|bi lead)\b", t, re.I):
+                     r"data scientist|machine learning|ml engineer|ai engineer|agentic ai|"
+                     r"generative ai|llm|decision science|sql developer|analytics consultant|bi lead)\b", t, re.I):
             return "core", 18.0
         if re.search(r"\b(analyst|analytics|data|intelligence|reporting|insights|"
-                     r"engineer|consultant|developer|database|etl|pipeline)\b", t, re.I):
+                     r"engineer|consultant|developer|database|etl|pipeline|architect|applied ai)\b", t, re.I):
             return "adjacent", 10.5
 
     if TITLE_DISQUALIFY.search(t):

@@ -100,3 +100,37 @@ services:
         value: "libsql://jobhunter-vaibhav-saurabhdevspace.aws-ap-south-1.turso.io"
       - key: TURSO_AUTH_TOKEN
         sync: false
+
+  # ---------------------------------------------------------------------------
+  # Saurabh Portal (Port 8083)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: jobhunter-saurabh
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: JOBHUNTER_PROFILE
+        value: "config/profile_saurabh.yaml"
+      - key: JOBHUNTER_SEARCH_MATRIX
+        value: "config/search_matrix_saurabh.yaml"
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: CLINE_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        value: "https://sfrhhjgtqljxppvjgqog.supabase.co"
+      - key: SUPABASE_BUCKET
+        value: "resumes"
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: TURSO_DATABASE_URL
+        value: "libsql://jobhunter-saurabh-saurabhdevspace.aws-ap-south-1.turso.io"
+      - key: TURSO_AUTH_TOKEN
+        sync: false
