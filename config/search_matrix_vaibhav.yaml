@@ -46,15 +46,15 @@ locations:
 
 jobspy:
   enabled: true
-  sites: [linkedin, indeed]
+  sites: [indeed]
   blocked_without_proxy: [zip_recruiter, naukri, glassdoor, google]
   proxies: []
-  max_terms: 4
-  results_wanted: 25
+  max_terms: 5
+  results_wanted: 30
   hours_old: 168
   country_indeed: India
   is_remote: false
-  locations: ["Mumbai, India", "Pune, India", "Nagpur, India", "India"]
+  locations: ["Mumbai, India", "Pune, India", "India"]
 
 ycombinator:
   enabled: true
