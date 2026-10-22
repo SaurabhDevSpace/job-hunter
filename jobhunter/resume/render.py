@@ -378,8 +378,14 @@ li::marker{color:var(--brand)}
   .hero .role{font-size:13.5px !important;margin-top:3px !important}
   .hero .cred{font-size:11.5px !important;margin-top:6px !important;padding:3px 10px !important}
   .hero .contact{font-size:11.5px !important;margin-top:9px !important;gap:4px 12px !important}
-  .main{padding:18px 22px 20px 26px !important;width:calc(100% - 265px) !important}
-  .side{padding:18px 22px 20px 18px !important;width:265px !important}
+  /* Stack the two columns vertically in print. The float-based two-column layout
+     fragments unreliably across pages in BOTH Chrome and WeasyPrint: sections get
+     reordered (e.g. the last section jumps to the top of page 2), lines are dropped
+     at the break, and the right column is left empty on page 2. A single-column
+     flow paginates cleanly and in order in both engines. */
+  .main{float:none !important;width:100% !important;padding:18px 26px 4px !important}
+  .side{float:none !important;width:100% !important;padding:14px 26px 20px !important;
+    border-left:0 !important;border-top:1px solid var(--rule) !important}
   h2{font-size:10.5px !important;margin-bottom:8px !important}
   section{margin-bottom:14px !important}
   .summary{font-size:12.4px !important;line-height:1.48 !important}
